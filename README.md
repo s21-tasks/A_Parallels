@@ -1,153 +1,162 @@
 # Parallels
 
-Реализация проекта Parallels.
+Implementation of the Parallels project.
+
+The russian version of the task can be found in the repository.
 
 
 ## Contents
 
 1. [Chapter I](#chapter-i) \
-    1.1. [Introduction](#introduction)
+   1.1. [Introduction](#introduction)
 2. [Chapter II](#chapter-ii) \
-    2.1. [Многопоточность](#многопоточность) \
-    2.2. [Мьютексы](#мьютексы) \
-    2.3. [Метод конвейерного параллелизма](#метод-конвейерного-параллелизма)
+   2.1. [Multithreading](#multithreading) \
+   2.2. [Mutexes](#mutexes) \
+   2.3. [Pipeline parallelism](#pipeline-parallelism)
 3. [Chapter III](#chapter-iii) \
-    3.1. [Part 1](#part-1-муравьиный-алгоритм)  \
-    3.2. [Part 2](#part-1-решение-слау)  \
-    3.3. [Part 3](#part-1-алгоритм-винограда) 
+   3.1. [Part 1](#part-1-ant-colony-optimization-algorithm-(ACO))  \
+   3.2. [Part 2](#part-2-solving-systems-of-linear-equations-(SLE))  \
+   3.3. [Part 3](#part-3-winograd-algorithm)
 
 
 ## Chapter I
 
+Chuck sat down at the table with such force that the coffee almost spilled out of the cup.
+
+`-` "You won't believe what I just heard from the IS guy," he began, looking around for a waiter. This cafe was a spot that the two of them had been fond of since college. Not crowded, with delicious coffee and desserts. And most importantly, it was always quiet and peaceful there. Perfect for doing your thing, working, or studying, something Eve was doing right now. She was interested in multithreading and paralleling algorithms for a long time.  And now, she had finally found the time to study it properly.
+
+`-` "So, our "geniuses" above managed to lose some dangerous supersmart artificial intelligence," Chuck began to whisper. "I don't know what kind of assassin vacuum cleaner they were making it for, but everyone seems to be in panic. I heard Bob's not himself."
+
+`-` "Sounds serious," said Eve, breaking away from her tasks. "I overheard something like that, too, but Bob didn't seem too frightened. And how do you lose artificial intelligence? It's not like it dropped out of the pocket."
+
+`-` "God knows. What if it ran away on its own? Anyway, it all looks very dirty.  Have you seen our financial reports? I work with it. And things aren't so good there to invest in some innovative robots. I'm telling you, they're secretly building the Terminator."
+
+`-` "Oh, come on," said Eve thoughtfully.
+
+`-` "You'll see," Chuck replied distractedly. "So, what did you order? Mmm, smells good..."
+
 ## Introduction
 
-В данном проекте вам предстоит ознакомиться с основными подходами к параллелизму, а также реализовать некоторые алгоритмы с его применением.
+In this project, you will learn the basic approaches to parallelism, and implement some algorithms applying it.
 
 
 ## Chapter II
 
-### Многопоточность
+### Multithreading
 
-**Синхронная программная модель** – это программная модель, в рамках которой каждому потоку назначается набор задач. 
-Все задачи в рамках потока выполняются последовательно друг за другом, когда завершено выполнение одной задачи, появляется возможность заняться другой. 
-В этой модели невозможно останавливать выполнение задачи, чтобы в промежутке выполнить другую задачу.
+**Synchronous programming** is a programming model where each thread has a set of tasks. All tasks within the thread are executed sequentially, and when one task is completed, it is possible to do another one. In this model you can’t stop the execution of a task in order to perform another one in between.
 
-Частным случаем синхронной модели является *однопоточность*. Если имеется несколько задач, которые надлежит выполнить, и текущая система предоставляет один поток, который может работать со всеми задачами, то он берет поочередно одну за другой и процесс выглядит так:
+A special case of synchronous programming is *single-threading*. If there are several tasks to be executed, and the current system provides one thread that can handle all the tasks, then it takes one by one, and the process looks like this:
 
 ![singlethreaded](misc/images/singlethreaded.png)
 
-Здесь видно, что имеется поток и 4 задачи, которые необходимо выполнить. 
-Поток начинает выполнять поочередно одну за одной и выполняет их в итоге все. 
+Here you can see that there is a thread and 4 tasks to be executed. The thread starts to execute them one by one and eventually completes them all.
 
-В случаях, когда порядок, в котором задачи выполняются, не влияет на результат работы программы, может быть применена *многопоточность*.
+In cases where the order in which the tasks are executed does not affect the result of the program, *Multithreading* can be applied.
 
-Многопоточность является другим случаем синхронной модели – в этом сценарии, используются много потоков, которые могут брать задачи и приступать к работе с ними, т.е. у нас есть пулы потоков и множество задач. \
-Итак, многопоточность может работать вот так:
+Multithreading is another case of the synchronous programming in which there are many threads that can take tasks and start working on them, i.e. we have thread pools and many tasks. \
+So, multithreading can work like this:
 
 ![multithreaded](misc/images/multithreaded.png)
 
-Здесь можно видеть, что у нас есть 4 потока и столько же задач для выполнения, и каждый поток начинает работать с ними. 
-Это идеальный сценарий, но в обычных условиях используется большее количество задач чем количество доступных потоков, таким образом освободившийся поток получает другое задание. \
-Нежелательно каждый раз создавать новые потоки, потому что для этого требуется использование дополнительных системных ресурсов, таких как процессорное время, память. Поэтому изначальное количество потоков должно быть заранее заданным.
+Here you can see that we have 4 threads and just as many tasks to execute, and each thread starts working on them. This is a perfect case, but under normal conditions more tasks are used than the number of available threads, so the freed thread gets another task. \
+Creating new threads each time is unadvisable, because it requires using additional system resources such as CPU time and memory. So, the initial number of threads should be set in advance.
 
-### Мьютексы
+### Mutexes
 
-При написании многопоточных приложений почти всегда требуется работать с общими данными, одновременное изменение которых может привести к очень неприятным последствиям.
-Для блокировки общих данных от одновременного доступа необходимо использовать *объекты синхронизации*.
+When writing multithreaded applications, it is almost always necessary to work with shared data, which can lead to very unpleasant consequences if they are changed at the same time.
+To lock shared data from simultaneous access, you need to use *synchronization objects*.
 
-**Мьютекс** представляет собой взаимно исключающий синхронизирующий объект. 
-Это означает, что он может быть получен потоком только по очереди. 
-Мьютекс предназначен для тех ситуаций, в которых общий ресурс может быть одновременно использован только в одном из потоков. 
-Допустим, что системный журнал совместно используется в нескольких процессах, но только в одном из них данные могут записываться в файл этого журнала в любой момент времени. 
-Для синхронизации процессов в данной ситуации идеально подходит мьютекс.
+**Mutex** is a mutually exclusive synchronization object. This means that the thread can only receive it one at a time. Mutex is designed for situations where a shared resource can only be used in one of the threads at a time.
+Say that the system log is being shared among several processes, but only one of them can save data to the log file at any given time. Mutex is perfect for synchronizing these processes.
 
-Для описания мьютекса требуется всего один бит, хотя чаще используется целая переменная, у которой 0 означает неблокированное состояние, а все остальные значения соответствуют блокированному состоянию. 
-Значение мьютекса устанавливается двумя процедурами: захвата и освобождения.
-1. Если поток собирается войти в критическую область, он вызывает процедуру захвата. 
-2. Если мьютекс не заблокирован, запрос выполняется и вызывающий поток может попасть в критическую область. 
-3. Если mutex закрыт, то поток пытающийся войти в критическую секцию блокируется.
-4. Если поток собирается выйти из критической области, он, соответственно, вызывает процедуру освобождения.
+Only one bit is needed to describe a mutex, although more often an integer variable is used, where 0 means the unlocked state and all other values correspond to the locked state.
 
-Принципы работы с мьютексами отличаются в Windows и Linix, но в общем случае можно выделить следующие шаги:
-- Создание/Описание
-- Открытие/Инициализация
-- Попытка захвата и ожидание
-- Освобождение
+The mutex value is set by two procedures: acquire and release.
 
-### Метод конвейерного параллелизма
+1. If a thread is about to enter a critical section, it calls the acquire procedure
+2. If the mutex is unlocked, the request is executed, and the calling thread can get into the critical section.
+3. If mutex is locked, the thread trying to enter the critical section is locked.
+4. If the thread is about to exit the critical section, it calls the release procedure.
 
-Классическим способом применения многопоточности, в случае, когда необходимо решить одну и ту же задачу для некоторого количества *N* наборов исходных данных, является запуск всего алгоритма в одном потоке. 
-При таком подходе каждым потоком алгоритм выполняется для *N/(число_потоков)* наборов исходных данных.
+The principles of working with mutexes differ between Windows and Linux, but we can highlight the following general steps:
+- Create/Describe
+- Open/Initialize
+- Acquire and wait
+- Release
 
-**Конвейеризация** (или конвейерная обработка) в общем случае основана на разделении подлежащего исполнению алгоритма на более мелкие части, называемые ступенями, и выделении для каждой из них отдельного потока. 
-Так обработку любого набора данных можно разделить на несколько этапов, организовав передачу данных от одного этапа к следующему. 
-Производительность при этом возрастает благодаря тому, что на различных ступенях (в разных потоках) конвейера одновременно обрабатываются разные наборы данных. 
+### Pipeline parallelism
 
-Пример организации работы конвейера:
+The classic way to apply multithreading, in the case when you need to solve the same problem for some *N* sets of input data, is to run the entire algorithm in one thread.  
+In this approach, each thread executes the algorithm for *N/(number_of_threads)* sets of input data.
 
-![conveyor](misc/images/conveyor.png)
+**Pipelining** is generally based on dividing the algorithm to be executed into smaller parts, called stages, and allocating a separate thread to each of them. So the processing of any set of data can be divided into several stages, organizing the transfer of data from one stage to the next. The performance in this case increases due to the fact that at different stages (in different threads) of the pipeline at the same time different sets of data are processed.
 
-В качестве конкретного примера можно привести алгоритм поиска наибольшего числа в строке. 
-На вход подается массив строк, для каждой из которых нужно выполнить поиск. 
-В первом потоке будет выполняться разбиение строки на слова, во втором приведение слов к числовому типу данных, в третьем поиск наибольшего среди чисел. 
-И тогда процесс работы будет выглядеть так:
-1. В первом потоке обрабатывается 1-я строка из массива. Остальные строки ожидают своей очереди.
-2. Массив слов, полученный после обработки 1-й строки поступает на обработку во 2-й поток. Так как первой поток освободился, в него на обработку поступает 2-я строка.
-3. Далее переход между 2-м и 3-м потоками происходит так же, как и между 1-м и 2-м.
-4. В случае, если 2-я строка обработалась в 1-м потоке быстрее, чем 1-я строка во 2-м потоке, 2-я строка поступает в очередь ожидающих освобождения 2-го потока. Тем временем, так как первой поток освободился, в него на обработку поступает 3-я строка.
+An example of the pipeline's work organization:
+
+![pipeline](misc/images/conveyor.png)
+
+The example is the algorithm for finding the largest number in a string.
+The input is an array of strings, for each of which we need to search.
+The first thread will split the string into words, the second will convert the words to a numeric data type, and the third will search for the largest among the numbers.
+The work process will look like this:
+1. The first thread processes the first string in the array. The rest are waiting for their turn.
+2. The array of words obtained after processing the 1st string goes to the 2nd thread. Since the first thread is free, it receives the 2nd string for processing.
+3. Then the switch between threads 2 and 3 is done in the same way as between threads 1 and 2.
+4. If the 2nd string is processed in the 1st thread faster than the 1st string in the 2nd thread, the 2nd string enters the queue waiting for the 2nd thread to release. In the meantime, since the first thread is free, it receives the 3rd string for processing.
 
 
 ## Chapter III
 
-## Part 1. Муравьиный алгоритм
+## Part 1. Ant colony optimization algorithm (ACO)
 
-Необходимо реализовать муравьиный алгоритм для решения задачи коммивояжера из прошлого задания *A2_SimpleNavigator* с применением параллельных вычислений и без них:
-- Программа должна быть разработана на языке C++ стандарта C++17
-- Код программы должен находиться в папке src
-- Не использовать устаревшие и выведенные из употребления конструкции языка и библиотечные функции
-- Предусмотреть Makefile для сборки библиотеки и тестов (с целями all, clean, ant)
-- У программы должен быть предусмотрен консольный интерфейс
-- Пользователем задается матрица для задачи коммивояжера
-- Пользователем задается кол-во выполнений *N*
-- Вывести на экран результаты работы каждого из алгоритмов для указанной матрицы
-- Измерить время, которое потребуется для выполнения *N* раз муравьиного алгоритма с применением параллелизма для заданной пользователем матрицы
-- Измерить время, которое потребуется для выполнения *N* раз обычного муравьиного алгоритма для заданной пользователем матрицы
-- На экран вывести полученные времена
-- Для блокировки доступа к данным при параллельной реализации, использовать мьютексы
+You need to implement an ACO algorithm to solve the traveling salesman problem from the *A2_SimpleNavigator* project with and without parallel computing:
+- The program must be developed in C++ language of C++17 standard
+- The program code must be located in the src folder
+- Do not use outdated language constructs and libraries
+- Provide a Makefile for building the library and tests (with targets all, clean, tests, ant)
+- The program must have a console interface
+- The user sets the matrix for the traveling salesman problem
+- The user sets the number of executions *N*
+- Display the results of each of the algorithms for the specified matrix
+- Measure the time it takes to execute *N* times an ACO algorithm applying parallelism for a user-defined matrix
+- Measure the time it takes to execute *N* times the usual ant algorithm for a user-defined matrix
+- Display the obtained time
+- Use mutexes to lock access to data for parallel implementation
 
-## Part 2. Решение СЛАУ
+## Part 2. Solving systems of linear equations (SLE)
 
-Необходимо реализовать обычный и параллельный алгоритмы решения СЛАУ методом Гаусса:
-- Программа должна быть разработана на языке C++ стандарта C++17
-- Код программы должен находиться в папке src
-- Не использовать устаревшие и выведенные из употребления конструкции языка и библиотечные функции
-- Предусмотреть Makefile для сборки библиотеки и тестов (с целями all, clean, gauss)
-- У программы должен быть предусмотрен консольный интерфейс
-- Пользователем задается матрица, описывающая СЛАУ
-- Пользователем задается кол-во выполнений *N*
-- Вывести на экран результаты работы каждого из алгоритмов для указанной СЛАУ
-- Измерить время, которое потребуется для выполнения *N* раз параллельного алгоритма решения заданной пользователем СЛАУ
-- Измерить время, которое потребуется для выполнения *N* раз обычного алгоритма решения заданной пользователем СЛАУ
-- Вывести на экран полученные времена
-- Для блокировки доступа к данным при параллельной реализации, использовать мьютексы
+You need to implement the usual and parallel algorithms to solve the SLE using the Gaussian elimination method:
+- The program must be developed in C++ language of C++17 standard
+- The program code must be located in the src folder
+- Do not use outdated language constructs and libraries
+- Provide a Makefile for building the library and tests (with targets all, clean, tests, gauss)
+- The program must have a console interface
+- The user sets the matrix describing the SLE
+- The user sets the number of executions *N*
+- Display the results of each of the algorithms for the specified SLE
+- Measure the time it takes to execute *N* times a parallel algorithm for solving a user-defined SLE
+- Measure the time it takes to execute *N* times the usual algorithm for solving a user-defined SLE
+- Display the obtained time
+- Use mutexes to lock access to data for parallel implementation
 
-## Part 3. Алгоритм Винограда
+## Part 3. Winograd algorithm
 
-Необходимо реализовать алгоритм Винограда умножения матриц без применения параллелизма, а также с использованием конвейерного и классического способов параллелизма:
-- Программа должна быть разработана на языке C++ стандарта C++17
-- Код программы должен находиться в папке src
-- Не использовать устаревшие и выведенные из употребления конструкции языка и библиотечные функции
-- Предусмотреть Makefile для сборки библиотеки и тестов (с целями all, clean, winograd)
-- Должно быть выделено 4 стадии работы конвейера
-- У программы должен быть предусмотрен консольный интерфейс
-- Должно быть предусмотрено 2 способа ввода:
-    - Пользователем задаются обе матриц для умножения
-    - Пользователем задаются размерности матриц, которые затем заполняются в программе случайным образом
-- Пользователем задается кол-во выполнений *N*
-- Вывести на экран результаты работы каждого из алгоритмов, а также сгенерированные матрицы
-- Измерить время, которое потребуется для выполнения *N* раз перемножения матриц без применения параллелизма
-- Измерить время, которое потребуется для выполнения *N* раз перемножения матриц с применением классического параллелизма при количестве потоков, равном 2, 4, 8, ..., 4 * (число логических процессоров компьютера)
-- Измерить время, которое потребуется для выполнения *N* раз перемножения матриц с применением конвейерного параллелизма
-- Вывести на экран полученные времена
-- Для блокировки доступа к данным при параллельной реализации, использовать мьютексы
+You need to implement the Winograd algorithm of matrix multiplication without using parallelism, as well as using pipeline and classical methods of parallelism:
+- The program must be developed in C++ language of C++17 standard
+- The program code must be located in the src folder
+- Do not use outdated language constructs and libraries
+- Provide a Makefile for building the library and tests (with targets all, clean, tests, winograd)
+- There should be four stages of the pipeline work
+- The program must have a console interface
+- There should be two ways of entering:
+    - The user sets both matrices for multiplication
+    - The user sets dimensions of the matrices, which are then filled into the program randomly
+- The user sets the number of executions *N*
+- Display the results of each of the algorithms as well as the generated matrices
+- Measure the time it takes to execute *N* times matrix multiplication without using parallelism
+- Measure the time it takes to execute *N* times matrix multiplication using classical parallelism with the number of threads equal to 2, 4, 8, ..., 4 * (number of logical computer processors)
+- Measure the time it takes to execute *N* times matrix multiplication using pipeline parallelism
+- Display the obtained time
+- Use mutexes to lock access to data for parallel implementation
 
