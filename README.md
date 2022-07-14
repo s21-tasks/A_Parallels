@@ -19,7 +19,9 @@ The russian version of the task can be found in the repository.
    3.3. [Part 3](#part-3-winograd-algorithm)
 
 
-## Chapter I
+## Chapter I  
+
+![Parallels](misc/images/Parallels.JPG)
 
 Chuck sat down at the table with such force that the coffee almost spilled out of the cup.
 
