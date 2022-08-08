@@ -115,8 +115,9 @@ The work process will look like this:
 You need to implement an ACO algorithm to solve the traveling salesman problem from the *A2_SimpleNavigator* project with and without parallel computing:
 - The program must be developed in C++ language of C++17 standard
 - The program code must be located in the src folder
+- When writing code it is necessary to follow the Google style
 - Do not use outdated language constructs and libraries
-- Provide a Makefile for building the library and tests (with targets all, clean, tests, ant)
+- Provide a Makefile for building the program (with targets all, clean, ant)
 - The program must have a console interface
 - The user sets the matrix for the traveling salesman problem
 - The user sets the number of executions *N*
@@ -131,8 +132,9 @@ You need to implement an ACO algorithm to solve the traveling salesman problem f
 You need to implement the usual and parallel algorithms to solve the SLE using the Gaussian elimination method:
 - The program must be developed in C++ language of C++17 standard
 - The program code must be located in the src folder
+- When writing code it is necessary to follow the Google style
 - Do not use outdated language constructs and libraries
-- Provide a Makefile for building the library and tests (with targets all, clean, tests, gauss)
+- Add to an existing Makefile target called "gauss" for building the program
 - The program must have a console interface
 - The user sets the matrix describing the SLE
 - The user sets the number of executions *N*
@@ -147,8 +149,9 @@ You need to implement the usual and parallel algorithms to solve the SLE using t
 You need to implement the Winograd algorithm of matrix multiplication without using parallelism, as well as using pipeline and classical methods of parallelism:
 - The program must be developed in C++ language of C++17 standard
 - The program code must be located in the src folder
+- When writing code it is necessary to follow the Google style
 - Do not use outdated language constructs and libraries
-- Provide a Makefile for building the library and tests (with targets all, clean, tests, winograd)
+- Add to an existing Makefile target called "winograd" for building the program
 - There should be four stages of the pipeline work
 - The program must have a console interface
 - There should be two ways of entering:
