@@ -165,3 +165,5 @@ You need to implement the Winograd algorithm of matrix multiplication without us
 - Display the obtained time
 - Use mutexes to lock access to data for parallel implementation
 
+
+💡 [Tap here](https://forms.yandex.ru/u/635aa91ac769f120b3a81f17/) **to leave your feedback on the project**. Pedago Team really tries to make your educational experience better.
