@@ -1,16 +1,20 @@
-//
-// Created by Иван Захаров on 04.06.2023.
-//
-
-#ifndef PARALLELS_SLAEGAUSS_H
-#define PARALLELS_SLAEGAUSS_H
+#pragma once
 
 namespace s21 {
 
-class SLAEGauss {
+  class SLAEGauss {
+  public:
+    SLAEGauss();
 
-};
+
+    UsualExecute();
+    ParallelExecute();
+
+
+
+  private:
+
+
+  };
 
 } // s21
-
-#endif //PARALLELS_SLAEGAUSS_H
