@@ -1,18 +1,29 @@
 #pragma once
 
+#include "matrix.h"
+#include <vector>
+
 namespace s21 {
 
   class SLAEGauss {
   public:
-    SLAEGauss();
+
+    SLAEGauss() = delete;
+    SLAEGauss(const Matrix<double>& m, const std::vector<double>& consts);
 
 
-    UsualExecute();
-    ParallelExecute();
+    void set_equations(const Matrix<double>& m, const std::vector<double>& consts);
+
+    std::vector<double> UsualExecute();
+    std::vector<double> ParallelExecute();
 
 
 
   private:
+    Matrix<double> matrix;
+    std::vector<double> constants;
+
+
 
 
   };
