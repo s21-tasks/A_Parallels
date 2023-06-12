@@ -1,6 +1,7 @@
 #pragma once
 
 #include "matrix.h"
+#include "../sub/thread_pool/thread_pool.h"
 #include <vector>
 
 namespace s21 {
@@ -11,6 +12,7 @@ namespace s21 {
     SLAEGauss() = delete;
     SLAEGauss(const Matrix<double>& m, const std::vector<double>& consts);
 
+    ~SLAEGauss() = default;
 
     void set_equations(const Matrix<double>& m, const std::vector<double>& consts);
 
@@ -20,8 +22,14 @@ namespace s21 {
 
 
   private:
+
+    void StraightStrokeStep(int k);
+    void ReverseStrokeStep(int i);
+
     Matrix<double> matrix;
     std::vector<double> constants;
+    std::vector<double> solution;
+    int n = 0;
 
 
 

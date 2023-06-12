@@ -5,6 +5,9 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(../sub/matrix ${CMAKE_BINARY_DIR}/matrix)
+
+#add_subdirectory(../sub/thread_pool ${CMAKE_BINARY_DIR}/thread_pool)
+
 #add_subdirectory(GraphAlgorithms ${CMAKE_BINARY_DIR}/GraphAlgorithms)
 #add_subdirectory(Submodules/ConsoleInterface)
 
@@ -19,4 +22,7 @@ add_executable( ${PROJECT_NAME}
 #target_include_directories(${PROJECT_NAME} PRIVATE ${CMAKE_SOURCE_DIR}/Interface)
 
 target_link_libraries(${PROJECT_NAME} PUBLIC matrix)
+
+#target_link_libraries(${PROJECT_NAME} PUBLIC thread_pool)
+
 #target_link_libraries(${PROJECT_NAME} PRIVATE console_interface)

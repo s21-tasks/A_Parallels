@@ -1,7 +1,3 @@
-//
-// Created by Иван Захаров on 04.06.2023.
-//
-
 #include "SLAEGauss.h"
 
 namespace s21 {
@@ -15,27 +11,17 @@ namespace s21 {
       throw std::out_of_range("invalid sizes!");
     matrix = m;
     constants = consts;
+    n = (int)constants.size();
+    solution = std::vector<double>(n);
   }
 
   std::vector<double> SLAEGauss::UsualExecute() {
-    const int n = (int)constants.size();
     for (int k = 0; k < n - 1; ++k) {
-      for (int i = k + 1; i < n; ++i) {
-        double factor = matrix[i][k] / matrix[k][k];
-        constants[i] -= factor * constants[k];
-        for (int j = k; j < n; ++j) {
-          matrix[i][j] -= factor * matrix[k][j];
-        }
-      }
+      StraightStrokeStep(k);
     }
 
-    std::vector<double> solution(n);
-
     for (int i = n-1; i >=0;--i) {
-      double sum = 0;
-      for (int j = i + 1; j < n; ++j)
-        sum += matrix[i][j] * solution[j];
-      solution[i] = (constants[i] - sum) / matrix[i][i];
+      ReverseStrokeStep(i);
     }
     return solution;
   }
@@ -44,5 +30,21 @@ namespace s21 {
     return {};
   }
 
+  void SLAEGauss::StraightStrokeStep(int k) {
+    for (int i = k + 1; i < n; ++i) {
+      double factor = matrix[i][k] / matrix[k][k];
+      constants[i] -= factor * constants[k];
+      for (int j = k; j < n; ++j) {
+        matrix[i][j] -= factor * matrix[k][j];
+      }
+    }
+  }
+
+  void SLAEGauss::ReverseStrokeStep(int i) {
+    double sum = 0;
+    for (int j = i + 1; j < n; ++j)
+      sum += matrix[i][j] * solution[j];
+    solution[i] = (constants[i] - sum) / matrix[i][i];
+  }
 
 } // s21

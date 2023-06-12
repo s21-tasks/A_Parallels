@@ -5,8 +5,8 @@ all:
 gauss_test:
 	mkdir -p SystemsOfLinearEquationsSolve/build
 	cmake -B"SystemsOfLinearEquationsSolve/build" SystemsOfLinearEquationsSolve/.
-	make -C SystemsOfLinearEquationsSolve/.
-	./SystemsOfLinearEquationsSolve/gauss
+	make -C SystemsOfLinearEquationsSolve/build/.
+	./SystemsOfLinearEquationsSolve/build/gauss
 
 
 submodules:
