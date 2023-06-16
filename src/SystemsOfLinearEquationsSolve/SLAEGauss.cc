@@ -5,18 +5,11 @@ namespace s21 {
   SLAEGauss::SLAEGauss() = default;
 
 
-  SLAEGauss::SLAEGauss(unsigned int threads) : pool(ThreadPool(threads)) {}
 
 
-  SLAEGauss::SLAEGauss(const Matrix<double> &m, const std::vector<double> &consts) : pool(ThreadPool()){
+  SLAEGauss::SLAEGauss(const Matrix<double> &m, const std::vector<double> &consts){
     set_equations(m,consts);
   }
-
-
-  SLAEGauss::SLAEGauss(const Matrix<double> &m, const std::vector<double> &consts, unsigned int threads) : pool(ThreadPool(threads)){
-    set_equations(m,consts);
-  }
-
 
 
   void SLAEGauss::set_equations(const Matrix<double>& m, const std::vector<double>& consts) {
@@ -49,7 +42,8 @@ namespace s21 {
   }
 
 
-  std::vector<double> SLAEGauss::ParallelExecute() {
+  std::vector<double> SLAEGauss::ParallelExecute(unsigned threads) {
+    ThreadPool pool(threads);
     for (int k = 0; k < n - 1; ++k) {
       for (int i = k + 1; i < n; ++i) {
         double factor = matrix[i][k] / matrix[k][k];
@@ -69,6 +63,17 @@ namespace s21 {
       solution[i] = (constants[i] - sum) / matrix[i][i];
     }
     return solution;
+  }
+
+
+  void SLAEGauss::Print() {
+    for (int i = 0;  i < matrix.GetRows(); ++i) {
+      for (int j = 0;  j < matrix.GetCols(); ++j) {
+        std::cout << (matrix[i][j] >= 0 ? " + " : " - ");
+        std::cout << std::fabs(matrix[i][j]) << " * " << static_cast<char>(97+i) ;
+      }
+      std::cout << " = " << constants[i] << std::endl;
+    }
   }
 
 

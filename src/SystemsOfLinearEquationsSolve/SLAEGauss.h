@@ -10,17 +10,17 @@ namespace s21 {
   public:
 
     SLAEGauss();
-    SLAEGauss(unsigned threads);
     SLAEGauss(const Matrix<double>& m, const std::vector<double>& consts);
-    SLAEGauss(const Matrix<double>& m, const std::vector<double>& consts, unsigned threads);
 
-    SLAEGauss(SLAEGauss &gauss) = delete;
+    SLAEGauss(SLAEGauss &gauss) = default;
     ~SLAEGauss() = default;
 
     void set_equations(const Matrix<double>& m, const std::vector<double>& consts);
 
     std::vector<double> UsualExecute();
-    std::vector<double> ParallelExecute();
+    std::vector<double> ParallelExecute(unsigned threads);
+
+    void Print();
 
 
 
@@ -29,7 +29,7 @@ namespace s21 {
     std::vector<double> constants;
     std::vector<double> solution;
     int n = 0;
-    ThreadPool pool;
+
   };
 
 } // s21
