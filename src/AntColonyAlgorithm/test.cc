@@ -31,13 +31,13 @@ int main() {
     auto res20 = ac20.Solve();
     std::cout << '\n' << res20.distance << "\n\n";
 
-    SStr::Print(Time::Compare(5, [&] {
-        AntColony<fp_type> ac(M1);
-        auto res = ac.Solve();
-    }, [&] {
-        AntColony20<fp_type> ac20(M1);
-        auto res20 = ac20.Solve();
-    }));
+    // SStr::Print(Time::Compare(5, [&] {
+    //     AntColony<fp_type> ac(M1);
+    //     auto res = ac.Solve();
+    // }, [&] {
+    //     AntColony20<fp_type> ac20(M1);
+    //     auto res20 = ac20.Solve();
+    // }));
 
 
 

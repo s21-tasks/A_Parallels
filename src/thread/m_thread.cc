@@ -13,7 +13,6 @@ ThreadManager::ThreadManager(int thread_count) :
                     std::unique_lock<std::mutex> lock(mtx_);
                     cv_.wait(lock, [&] { return (bool)ready_[thc]; });
                 }
-                // std::cout << std::this_thread::get_id() << " start\n";
 
                 if (stopped_) {
                     return;
@@ -29,7 +28,6 @@ ThreadManager::ThreadManager(int thread_count) :
                     ready_[thc] = false;
                     ++finished_;
                 }
-                // std::cout << std::this_thread::get_id() << " end\n";
                 cv_.notify_all();
             }
         });
@@ -37,14 +35,12 @@ ThreadManager::ThreadManager(int thread_count) :
 }
 
 void ThreadManager::ShutDown() {
-    // std::cout << "ShutDown start\n";
     std::fill(ready_.begin(), ready_.end(), true);
     stopped_ = true;
     cv_.notify_all();
     for (auto& thread : threads_) {
         thread.join();
     }
-    // std::cout << "ShutDown end\n";
 }
 
 void ThreadManager::Run() {
@@ -77,6 +73,16 @@ void ThreadManager::LoopExecute(int loop_count, const std::function<void(int)> &
     Run();
 }
 
+std::function<void(int)> ThreadManager::LoopThreads(int thread_count, int loop_k, const std::function<void(int)> &func) {
+    return [thread_count, loop_k, &func] (int thc) {
+        int delta = loop_k / thread_count;
+        int end = (thc == thread_count - 1 ? loop_k : (thc + 1) * delta);
+        for (int k = thc * delta; k < end; ++k) {
+            func(k);
+        }
+    };
+}
+
 void ThreadManager::DispThreads(int thread_count, const std::function<void(int)> &func) {
     std::vector<std::thread> threads;
     for (int thc = 0; thc < thread_count; ++thc) {
@@ -85,14 +91,4 @@ void ThreadManager::DispThreads(int thread_count, const std::function<void(int)>
     for (auto& thread : threads) {
         thread.join();
     }
-}
-
-std::function<void(int)> ThreadManager::LoopThreads(int thread_count, int loop_k, const std::function<void(int)> &func) {
-    return  [thread_count, loop_k, &func] (int thc) {
-        int delta = loop_k / thread_count;
-        int end = (thc == thread_count - 1 ? loop_k : (thc + 1) * delta);
-        for (int k = thc * delta; k < end; ++k) {
-            func(k);
-        }
-    };
 }
