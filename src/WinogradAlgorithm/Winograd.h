@@ -1,262 +1,284 @@
 #pragma once
 
-#include "../sub/Matrix/Matrix.h"
+// #define MATRIX_1D
+
+#include "../sub/matrix/matrix.h"
 
 #include <vector>
+#include <thread>
 
-namespace s21 {
+#include <memory>
 
-template<class T>
-struct WMatrix {
-    const Matrix<T> &m_;
-    int c1_, c2_, r1_, r2_;
-    WMatrix(const Matrix<T> &m, int c1, int c2, int r1, int r2) :
-        m_(m), c1_(c1), c2_(c2), r1_(r1), r2_(r2) {}
-    WMatrix(const Matrix<T> &m) :
-        m_(m), c1_(0), c2_(m.GetCols()), r1_(0), r2_(m.GetRows()) {}
+// #include <mpi.h>
 
-    const T &operator()(int r, int c) const {
-        return m_(r + r1_, c + c1_);
-    }
-};
+namespace s21a {
+
+using namespace s21;
+
+// Matrix(row, col)
+// n m k
+// C(n, m) = A(n, k) * B(k, m)
+
+
+// Matrix(row, col)
+// n m k
+// C(n, m) = A(n, k) * B(k, m)
 
 template<class T>
 class Winograd {
+    using M = Matrix<T>;
+    using i_type = typename M::i_type;
+    using data_t = typename M::base;
 
     public:
-        static Matrix<T> Mul(Matrix<T> &A, Matrix<T> &B) {
-            int m = A.GetRows();
-            int n = A.GetCols();
-            int k = B.GetCols();
 
-            int d = n / 2;
+        // C(n, m) = A(n, k) * B(k, m)
+        Winograd(i_type n);
 
+        void Mul(const M &A, const M &B, M &C);
 
-            Matrix<T> C(m, k, 0);
+    private:
+        struct Level {
+            data_t A11, A12, A22, B11, B21, B22;
+            data_t S1, S2, S3, S4, T1, T2, T3, T4;
+            data_t R1, R2, R3, R4, R5, R6, R7;
+            i_type n;
 
-            std::vector<T> row_f(m, 0.0);
-            std::vector<T> col_f(k, 0.0);
+            Level(i_type n) : A11(n * n), A12(n * n), A22(n * n), B11(n * n), B21(n * n), B22(n * n),
+                    S1(n * n), S2(n * n), S3(n * n), S4(n * n), T1(n * n), T2(n * n), T3(n * n), T4(n * n),
+                    R1(n * n), R2(n * n), R3(n * n), R4(n * n), R5(n * n), R6(n * n), R7(n * n), n(n) {}
+            
+            virtual void MxABS(const T *A, const T *B) = 0;
+            virtual void MxR(T *C) = 0;
+        };
 
-            for (int i = 0; i < m; ++i) {
-                // row_f[i] = 0;
-                for (int j = 0; j < d; ++j) {
-                    row_f[i] += A(i, 2 * j) * A(i, 2 * j + 1);
-                }
-            }
+        struct LevelOdd : public Level {
+            using Level::n;
+            using Level::A11, Level::A12, Level::A22,
+                Level::B11, Level::B21, Level::B22,
+                Level::S1, Level::S2, Level::S3, Level::S4,
+                Level::T1, Level::T2, Level::T3, Level::T4,
+                Level::R1, Level::R2, Level::R3, Level::R4, Level::R5, Level::R6, Level::R7;
 
-            for (int i = 0; i < k; ++i) {
-                // clo_f[i] = 0;
-                for (int j = 0; j < d; ++j) {
-                    col_f[i] += B(2 * j, i) * B(2 * j + 1, i);
-                }
-            }
+            LevelOdd(i_type n) : Level(n) {}
+            void MxABS(const T *A, const T *B) override;
+            void MxR(T *C) override;
+        };
 
-            for (int i = 0; i < m; ++i) {
-                for (int j = 0; j < k; ++j) {
-                    C(i, j) = -1.0 * (row_f[i] + col_f[j]);
-                    for (int k = 0; k < d; ++k) {
-                        C(i, j) += (A(i, 2 * k) + B(2 * k + 1, j)) * (A(i, 2 * k + 1) + B(2 * k, j));
-                        if (n % 2 !=0) {
-                            C(i, j) += A(i, n - 1) * B(n - 1, j);
-                        }
-                    }
-                }
-            }
+        struct LevelEven : public Level {
+            using Level::n;
+            using Level::A11, Level::A12, Level::A22,
+                Level::B11, Level::B21, Level::B22,
+                Level::S1, Level::S2, Level::S3, Level::S4,
+                Level::T1, Level::T2, Level::T3, Level::T4,
+                Level::R1, Level::R2, Level::R3, Level::R4, Level::R5, Level::R6, Level::R7;
 
-        
+            LevelEven(i_type n) : Level(n) {}
+            void MxABS(const T *A, const T *B) override;
+            void MxR(T *C) override;
+        };
 
-            return C;
+        std::vector<std::unique_ptr<Level>> L_;
+        i_type n_, depth_;
 
-        }
+        void sw_helper(const T *A, const T *B, T *C, int n, int l);
+        void LastStep(const T *A, const T *B, T *C);
 
-        static void strassenWinogradMultiply(const Matrix<T> &A, const Matrix<T> &B, Matrix<T> &C);
-
-        static void strassenWinogradMultiply(const WMatrix<T> &A, const WMatrix<T> &B, Matrix<T> &C, int &count);
 };
 
+template<class T>
+Winograd<T>::Winograd(i_type n) : n_(n) {
+    // i_type f = std::cail(std::log2(n));
+
+    if (n_ & (n_ - 1)) {
+        // throw std::invalid_argument("n must be power of 2");
+        bool even = (n % 2 == 0);
+        if (!even) {
+            ++n;
+        }
+        while ((n /= 2) != 1) {
+
+            if (even)
+                L_.push_back(std::make_unique<LevelEven>(n));
+            else
+                L_.push_back(std::make_unique<LevelOdd>(n));
+
+            even = (n % 2 == 0);
+            if (!even) {
+                ++n;
+            }
+        }
+    } else {
+        while ((n /= 2) != 1) {
+            L_.push_back(std::make_unique<LevelEven>(n));
+        }
+    }
+
+    
+}
 
 
 template<class T>
-void Winograd<T>::strassenWinogradMultiply(const Matrix<T> &A, const Matrix<T> &B, Matrix<T> &C) {
-
-    // WMatrix<T> WA(A, 0, A.GetCols() - 1, 0, A.GetRows() - 1);
-    // WMatrix<T> BA(B, 0, B.GetCols() - 1, 0, B.GetRows() - 1);
-    int count = 0;
-    strassenWinogradMultiply(WMatrix<T>(A), WMatrix<T>(B), C, count);
-    std::cout << "count: " << count << '\n';
-
+void Winograd<T>::Mul(const M &A, const M &B, M &C) {
+    if (A.GetCols() != n_ || B.GetCols() != n_ || C.GetCols() != n_ ||
+        A.GetRows() != n_ || B.GetRows() != n_ || C.GetRows() != n_) {
+        throw std::invalid_argument("Matrix size not match");
+    }
+    sw_helper(A.Data().data(), B.Data().data(), C.Data().data(), n_ + 1, 0);
 }
 
 template<class T>
-void Winograd<T>::strassenWinogradMultiply(const WMatrix<T> &A, const WMatrix<T> &B, Matrix<T> &C, int &count) {
-    int n = A.r2_ - A.r1_;
+void Winograd<T>::LevelEven::MxABS(const T *A, const T *B) {
+    for (i_type i = 0, in = n; i < n; ++i, ++in) {
+        for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
+            T a11 = A[i * n * 2 + j];
+            T a12 = A[i * n * 2 + jn];
+            T a21 = A[in * n * 2 + j];
+            T a22 = A[in * n * 2 + jn];
+            T b11 = B[i * n * 2 + j];
+            T b12 = B[i * n * 2 + jn];
+            T b21 = B[in * n * 2 + j];
+            T b22 = B[in * n * 2 + jn];
+            A11[i * n + j] = a11;
+            A12[i * n + j] = a12;
+            A22[i * n + j] = a22;
+            B11[i * n + j] = b11;
+            B21[i * n + j] = b21;
+            B22[i * n + j] = b22;
+            S1[i * n + j] = a21 + a22;
+            S2[i * n + j] = a21 + a22 - a11;
+            S3[i * n + j] = a11 - a21;
+            S4[i * n + j] = a12 - a21 - a22 + a11;
+            T1[i * n + j] = b12 - b11;
+            T2[i * n + j] = b22 - b12 + b11;
+            T3[i * n + j] = b22 - b12;
+            T4[i * n + j] = b22 - b12 + b11 - b21;
+        }
+    }
+}
 
-    // std::cout << A.c1_ << ' ' << A.c2_ << ' ' << A.r1_ << ' ' << A.r2_ << ' ' << B.c1_ << ' ' << B.c2_ << ' ' << B.r1_ << ' ' << B.r2_ << '\n';
+template<class T>
+void Winograd<T>::LevelEven::MxR(T *C) {
+    for (i_type i = 0, in = n; i < n; ++i, ++in) {
+        for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
+            T r1 = R1[i * n + j];
+            T r7 = R7[i * n + j];
+            T r16 = r1 + R6[i * n + j];
+            T r165 = r16 + R5[i * n + j];
+            C[i * n * 2 + j] = r1 + R2[i * n + j];
+            C[i * n * 2 + jn] = r165 + R3[i * n + j];
+            C[in * n * 2 + j] = r16 - R4[i * n + j] + r7;
+            C[in * n * 2 + jn] = r165 + r7;
+        }
+    }
+}
+
+template<class T>
+void Winograd<T>::LevelOdd::MxABS(const T *A, const T *B) {
+    // std::cout << "LevelOdd::MxABS n = " << n << "\n";
+    for (i_type i = 0, in = n; i < n; ++i, ++in) {
+        for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
+            i_type cn = n * 2 - 1;
+            T a11 = A[i * cn + j];
+            T a12 = (jn == n * 2 - 1) ? 0 : A[i * cn + jn];
+            T a21 = (in == n * 2 - 1) ? 0 : A[in * cn + j];
+            T a22 = (in == n * 2 - 1 || jn == n * 2 - 1) ? 0 : A[in * cn + jn];
+            T b11 = B[i * cn + j];
+            T b12 = (jn == n * 2 - 1) ? 0 : B[i * cn + jn];
+            T b21 = (in == n * 2 - 1) ? 0 : B[in * cn + j];
+            T b22 = (in == n * 2 - 1 || jn == n * 2 - 1) ? 0 : B[in * cn + jn];
+            A11[i * n + j] = a11;
+            A12[i * n + j] = a12;
+            A22[i * n + j] = a22;
+            B11[i * n + j] = b11;
+            B21[i * n + j] = b21;
+            B22[i * n + j] = b22;
+            S1[i * n + j] = a21 + a22;
+            S2[i * n + j] = a21 + a22 - a11;
+            S3[i * n + j] = a11 - a21;
+            S4[i * n + j] = a12 - a21 - a22 + a11;
+            T1[i * n + j] = b12 - b11;
+            T2[i * n + j] = b22 - b12 + b11;
+            T3[i * n + j] = b22 - b12;
+            T4[i * n + j] = b22 - b12 + b11 - b21;
+        }
+    }
+}
+
+template<class T>
+void Winograd<T>::LevelOdd::MxR(T *C) {
+    Matrix<T> MxR(n * 2);
+    for (i_type i = 0, in = n; i < n; ++i, ++in) {
+        for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
+            T r1 = R1[i * n + j];
+            T r7 = R7[i * n + j];
+            T r16 = r1 + R6[i * n + j];
+            T r165 = r16 + R5[i * n + j];
+
+            i_type cn = n * 2 - 1;
+            C[i * cn + j] = r1 + R2[i * n + j];
+            if (!(jn == n * 2 - 1))
+                C[i * cn + jn] = r165 + R3[i * n + j];
+            if (!(in == n * 2 - 1))
+                C[in * cn + j] = r16 - R4[i * n + j] + r7;
+            if (!(in == n * 2 - 1) && !(jn == n * 2 - 1))
+                C[in * cn + jn] = r165 + r7;
+        }
+    }
+}
+
+template<class T>
+void Winograd<T>::LastStep(const T *A, const T *B, T *C) {
+    T a11 = A[0];
+    T a12 = A[1];
+    T a21 = A[2];
+    T a22 = A[3];
+    T b11 = B[0];
+    T b12 = B[1];
+    T b21 = B[2];
+    T b22 = B[3];
+    C[0] = a11 * b11 + a12 * b21;
+    C[1] = a11 * b12 + a12 * b22;
+    C[2] = a21 * b11 + a22 * b21;
+    C[3] = a21 * b12 + a22 * b22;
+}
+
+template<class T>
+void Winograd<T>::sw_helper(const T *A, const T *B, T *C, int n, int l) {
+
+    n /= 2;
 
     if (n == 1) {
-        C(0, 0) = A(0, 0) * B(0, 0);
-        ++count;
+        T a11 = A[0];
+        T a12 = A[1];
+        T a21 = A[2];
+        T a22 = A[3];
+        T b11 = B[0];
+        T b12 = B[1];
+        T b21 = B[2];
+        T b22 = B[3];
+        C[0] = a11 * b11 + a12 * b21;
+        C[1] = a11 * b12 + a12 * b22;
+        C[2] = a21 * b11 + a22 * b21;
+        C[3] = a21 * b12 + a22 * b22;
         return;
     }
-    // if (n < 1) {
-    //     std::cout << A.c1_ << ' ' << A.c2_ << ' ' << A.r1_ << ' ' << A.r2_ << ' ' << B.c1_ << ' ' << B.c2_ << ' ' << B.r1_ << ' ' << B.r2_ << '\n';
-    //     return;
-    // }
 
-    int newSize = n / 2;
+    auto &L = *L_[l++].get();
 
-    Matrix<T> S1(newSize);
-    Matrix<T> S2(newSize);
-    Matrix<T> S3(newSize);
-    Matrix<T> S4(newSize);
+    L.MxABS(A, B);
 
-    Matrix<T> T1(newSize);
-    Matrix<T> T2(newSize);
-    Matrix<T> T3(newSize);
-    Matrix<T> T4(newSize);
+    sw_helper(L.A11.data(), L.B11.data(), L.R1.data(), n + 1, l);
+    sw_helper(L.A12.data(), L.B21.data(), L.R2.data(), n + 1, l);
+    sw_helper(L.S4.data(), L.B22.data(), L.R3.data(), n + 1, l);
+    sw_helper(L.A22.data(), L.T4.data(), L.R4.data(), n + 1, l);
+    sw_helper(L.S1.data(), L.T1.data(), L.R5.data(), n + 1, l);
+    sw_helper(L.S2.data(), L.T2.data(), L.R6.data(), n + 1, l);
+    sw_helper(L.S3.data(), L.T3.data(), L.R7.data(), n + 1, l);
 
-    int newAc = (A.c2_ + A.c1_) / 2;
-    int newAr = (A.r2_ + A.r1_) / 2;
-    int newBc = (B.c2_ + B.c1_) / 2;
-    int newBr = (B.r2_ + B.r1_) / 2;
-
-    WMatrix<T> A11(A.m_, A.c1_, newAc, A.r1_, newAr);
-    WMatrix<T> A12(A.m_, newAc, A.c2_, A.r1_, newAr);
-    WMatrix<T> A21(A.m_, A.c1_, newAc, newAr, A.r2_);
-    WMatrix<T> A22(A.m_, newAc, A.c2_, newAr, A.r2_);
-
-    WMatrix<T> B11(B.m_, B.c1_, newBc, B.r1_, newBr);
-    WMatrix<T> B12(B.m_, newBc, B.c2_, B.r1_, newBr);
-    WMatrix<T> B21(B.m_, B.c1_, newBc, newBr, B.r2_);
-    WMatrix<T> B22(B.m_, newBc, B.c2_, newBr, B.r2_);
-
-    for (int i = 0; i < newSize; i++) {
-        for (int j = 0; j < newSize; j++) {
-
-            // int ai = i + A.r1_, aj = j + A.c1_, bi = B.r1_, bj = B.c1_;
-
-            S1(i, j) = A21(i, j) + A22(i, j);
-            S2(i, j) = S1(i, j) - A11(i, j);
-            S3(i, j) = A11(i, j) - A21(i, j);
-            S4(i, j) = A12(i, j) - S2(i, j);
-
-            T1(i, j) = B12(i, j) - B11(i, j);
-            T2(i, j) = B22(i, j) - T1(i, j);
-            T3(i, j) = B22(i, j) - B12(i, j);
-            T4(i, j) = T2(i, j) - B21(i, j);
-
-            count += 8;
-
-        }
-    }
-
-    Matrix<T> R1(newSize);
-    Matrix<T> R2(newSize);
-    Matrix<T> R3(newSize);
-    Matrix<T> R4(newSize);
-    Matrix<T> R5(newSize);
-    Matrix<T> R6(newSize);
-    Matrix<T> R7(newSize);
-
-    strassenWinogradMultiply(A11, B11, R1, count);
-    strassenWinogradMultiply(A12, B21, R2, count);
-    strassenWinogradMultiply(WMatrix<T>(S4), B22, R3, count);
-    strassenWinogradMultiply(A22, WMatrix<T>(T4), R4, count);
-    strassenWinogradMultiply(WMatrix<T>(S1), WMatrix<T>(T1), R5, count);
-    strassenWinogradMultiply(WMatrix<T>(S2), WMatrix<T>(T2), R6, count);
-    strassenWinogradMultiply(WMatrix<T>(S3), WMatrix<T>(T3), R7, count);
-
-    for (int i = 0; i < newSize; i++) {
-        for (int j = 0; j < newSize; j++) {
-            T r16 = R1(i, j) + R6(i, j);
-            T r165 = r16 + R5(i, j);
-
-            C(i, j) = R1(i, j) + R2(i, j);
-            C(i, j + newSize) = r165 + R3(i, j);
-            C(i + newSize, j) = r16 - R4(i, j) + R7(i, j);
-            C(i + newSize, j + newSize) = r165 + R7(i, j);
-
-            count += 4;
-        }
-    }
+    L.MxR(C);
 }
 
 
-
-
-
-
-
-// template<class T>
-// void Winograd<T>::strassenWinogradMultiply(const Matrix<T> &A, const Matrix<T> &B, Matrix<T> &C) {
-//     int n = A.GetRows();
-//     if (n == 1) {
-//         C[0][0] = A[0][0] * B[0][0];
-//         return;
-//     }
-//     int newSize = n / 2;
-//     Matrix<T> A11(newSize);
-//     Matrix<T> A12(newSize);
-//     // Matrix<T> A21(newSize);
-//     Matrix<T> A22(newSize);
-//     Matrix<T> B11(newSize);
-//     // Matrix<T> B12(newSize);
-//     Matrix<T> B21(newSize);
-//     Matrix<T> B22(newSize);
-//     Matrix<T> S1(newSize);
-//     Matrix<T> S2(newSize);
-//     Matrix<T> S3(newSize);
-//     Matrix<T> S4(newSize);
-//     Matrix<T> T1(newSize);
-//     Matrix<T> T2(newSize);
-//     Matrix<T> T3(newSize);
-//     Matrix<T> T4(newSize);
-//     for (int i = 0; i < newSize; i++) {
-//         for (int j = 0; j < newSize; j++) {
-//             A11(i, j) = A(i, j);
-//             A12(i, j) = A(i, j + newSize);
-//             // A21(i, j) = A(i + newSize, j); //
-//             A22(i, j) = A(i + newSize, j + newSize);
-//             B11(i, j) = B(i, j);
-//             // B12(i, j) = B(i, j + newSize); //
-//             B21(i, j) = B(i + newSize, j);
-//             B22(i, j) = B(i + newSize, j + newSize);
-//             S1(i, j) = A(i + newSize, j) + A22(i, j);
-//             S2(i, j) = S1(i, j) - A11(i, j);
-//             S3(i, j) = A11(i, j) - A(i + newSize, j);
-//             S4(i, j) = A12(i, j) - S2(i, j);
-//             T1(i, j) = B(i, j + newSize) - B11(i, j);
-//             T2(i, j) = B22(i, j) - T1(i, j);
-//             T3(i, j) = B22(i, j) - B(i, j + newSize);
-//             T4(i, j) = T2(i, j) - B21(i, j);
-//         }
-//     }
-//     Matrix<T> R1(newSize);
-//     Matrix<T> R2(newSize);
-//     Matrix<T> R3(newSize);
-//     Matrix<T> R4(newSize);
-//     Matrix<T> R5(newSize);
-//     Matrix<T> R6(newSize);
-//     Matrix<T> R7(newSize);
-//     strassenWinogradMultiply(A11, B11, R1);
-//     strassenWinogradMultiply(A12, B21, R2);
-//     strassenWinogradMultiply(S4, B22, R3);
-//     strassenWinogradMultiply(A22, T4, R4);
-//     strassenWinogradMultiply(S1, T1, R5);
-//     strassenWinogradMultiply(S2, T2, R6);
-//     strassenWinogradMultiply(S3, T3, R7);
-//     for (int i = 0; i < newSize; i++) {
-//         for (int j = 0; j < newSize; j++) {
-//             T r16 = R1(i, j) + R6(i, j);
-//             T r165 = r16 + R5(i, j);
-//             C(i, j) = R1(i, j) + R2(i, j);
-//             C(i, j + newSize) = r165 + R3(i, j);
-//             C(i + newSize, j) = r16 - R4(i, j) + R7(i, j);
-//             C(i + newSize, j + newSize) = r165 + R7(i, j);
-//         }
-//     }
-// }
-
 } // namespace s21
-
 
