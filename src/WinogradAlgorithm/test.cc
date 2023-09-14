@@ -4,16 +4,13 @@
 // #include "staticMatrix.h"
 #include "Winograd.h"
 
-#include "Winograd copy 2.h"
-
-#include "Winograd copy_func_ar.h"
-
-
 #include "../sub/utility/utility.h"
+
+#include "../sub/matrix/blas.h"
 
 using namespace s21;
 
-typedef int fp_type;
+typedef float fp_type;
 
 int main() {
 
@@ -39,39 +36,40 @@ int main() {
     Matrix<fp_type> C2(n, n);
     Matrix<fp_type> C3(n, n);
     Matrix<fp_type> C4(n, n);
-    // Matrix<fp_type> C5(n, n);
+    Matrix<fp_type> C5(n, n);
 
-    s21a::Winograd<fp_type> W2(n);
     Winograd<fp_type> W(n);
-    s21b::Winograd<fp_type> W3(n);
 
 
     std::cout << "START time test\n";
     auto T = Time::Now();
-    W3.Mul(A, B, C2);
+    W.Mul(A, B, C2);
     std::cout << Time::Duration<Time::ms>(T) << " ms\n";
     T = Time::Now();
-    auto C1 = A * B;
+    // auto C1 = A * B;
+    Blas<fp_type>::Mul(A, B, C5);
     std::cout << Time::Duration<Time::ms>(T) << " ms\n";
     T = Time::Now();
-    W2.Mul(A, B, C3);
+    // W2.Mul(A, B, C3);
+    Matrix<fp_type>::Mul(A, B, C3);
     std::cout << Time::Duration<Time::ms>(T) << " ms\n";
     
 
-    // std::cout << C1 << '\n' << C2 << '\n';
-    std::cout << "(C1 == C2) = " << (C1 == C2) << '\n';
-    std::cout << "(C1 == C3) = " << (C1 == C3) << '\n';
-    // std::cout << (C1 == C3) << '\n';
+    // std::cout << C5 << '\n' << C2 << '\n';
+    std::cout << "(C5 == C2) = " << (C5 == C2) << '\n';
+    std::cout << "(C5 == C3) = " << (C5 == C3) << '\n';
+    std::cout << "(C2 == C3) = " << (C2 == C3) << '\n';
 
-    // SStr::Print(Time::Compare<Time::ms>(1, [&] {
-    //     auto C1 = A * B;
-    // }, [&] {
-    //     W.MulAdj();
-    // }, [&] {
-    //     // Winograd<fp_type>::MulOneTime(A, B, C2);
-    // }, [&] {
-    //     // Winograd<fp_type>::MulThreadM(A, B, C4);
-    // }));
+
+
+
+    // Matrix<fp_type> C9(n, n);
+    // Matrix<fp_type> C8(n, n);
+
+    // Blas<fp_type>::MulAdj(A, B, C9);
+    // Matrix<fp_type>::MulAdj(A, B, C8);
+    // std::cout << C9 << ' ' << C8 << '\n';
+    // std::cout << (C9 == C8) << '\n';
 
     return 0;
 }

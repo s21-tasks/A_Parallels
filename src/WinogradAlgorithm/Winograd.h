@@ -6,23 +6,13 @@
 
 #include <vector>
 #include <thread>
-
 #include <memory>
 
 // #include <mpi.h>
 
-namespace s21a {
+namespace s21 {
 
 using namespace s21;
-
-// Matrix(row, col)
-// n m k
-// C(n, m) = A(n, k) * B(k, m)
-
-
-// Matrix(row, col)
-// n m k
-// C(n, m) = A(n, k) * B(k, m)
 
 template<class T>
 class Winograd {
@@ -31,90 +21,152 @@ class Winograd {
     using data_t = typename M::base;
 
     public:
-
-        // C(n, m) = A(n, k) * B(k, m)
-        Winograd(i_type n);
-
+        Winograd(i_type n, i_type square_cap = 128);
         void Mul(const M &A, const M &B, M &C);
+        // static void Mul(const M &A, const M &B, M &C);
 
     private:
-        struct Level {
-            data_t A11, A12, A22, B11, B21, B22;
-            data_t S1, S2, S3, S4, T1, T2, T3, T4;
-            data_t R1, R2, R3, R4, R5, R6, R7;
+        struct Level;
+        struct LevelEven;
+        struct LevelOdd;
+
+        struct LevelClassic final : public Level {
             i_type n;
+            using Level::next;
 
-            Level(i_type n) : A11(n * n), A12(n * n), A22(n * n), B11(n * n), B21(n * n), B22(n * n),
-                    S1(n * n), S2(n * n), S3(n * n), S4(n * n), T1(n * n), T2(n * n), T3(n * n), T4(n * n),
-                    R1(n * n), R2(n * n), R3(n * n), R4(n * n), R5(n * n), R6(n * n), R7(n * n), n(n) {}
-            
-            virtual void MxABS(const T *A, const T *B) = 0;
-            virtual void MxR(T *C) = 0;
+            LevelClassic(i_type n) : n(n) {}
+
+            void SW(const T *A, const T *B, T *C) override;
         };
 
-        struct LevelOdd : public Level {
-            using Level::n;
-            using Level::A11, Level::A12, Level::A22,
-                Level::B11, Level::B21, Level::B22,
-                Level::S1, Level::S2, Level::S3, Level::S4,
-                Level::T1, Level::T2, Level::T3, Level::T4,
-                Level::R1, Level::R2, Level::R3, Level::R4, Level::R5, Level::R6, Level::R7;
+        struct Level22 final : public Level {
+            using Level::next;
 
-            LevelOdd(i_type n) : Level(n) {}
-            void MxABS(const T *A, const T *B) override;
-            void MxR(T *C) override;
+            void SW(const T *A, const T *B, T *C) override;   
         };
-
-        struct LevelEven : public Level {
-            using Level::n;
-            using Level::A11, Level::A12, Level::A22,
-                Level::B11, Level::B21, Level::B22,
-                Level::S1, Level::S2, Level::S3, Level::S4,
-                Level::T1, Level::T2, Level::T3, Level::T4,
-                Level::R1, Level::R2, Level::R3, Level::R4, Level::R5, Level::R6, Level::R7;
-
-            LevelEven(i_type n) : Level(n) {}
-            void MxABS(const T *A, const T *B) override;
-            void MxR(T *C) override;
-        };
-
+        
         std::vector<std::unique_ptr<Level>> L_;
-        i_type n_, depth_;
 
-        void sw_helper(const T *A, const T *B, T *C, int n, int l);
-        void LastStep(const T *A, const T *B, T *C);
+        i_type n_;
 
 };
 
 template<class T>
-Winograd<T>::Winograd(i_type n) : n_(n) {
-    // i_type f = std::cail(std::log2(n));
+struct Winograd<T>::Level {
+    virtual void SW(const T *A, const T *B, T *C) = 0;
+    Level *next;
+    virtual ~Level() = default;
+};
 
-    if (n_ & (n_ - 1)) {
-        // throw std::invalid_argument("n must be power of 2");
-        bool even = (n % 2 == 0);
-        if (!even) {
-            ++n;
-        }
-        while ((n /= 2) != 1) {
+template<class T>
+struct Winograd<T>::LevelEven : public Level {
+    using Level::next;
 
-            if (even)
-                L_.push_back(std::make_unique<LevelEven>(n));
-            else
-                L_.push_back(std::make_unique<LevelOdd>(n));
+    T *A11, *A12, *A22, *B11, *B21, *B22;
+    T *S1, *S2, *S3, *S4, *T1, *T2, *T3, *T4;
+    T *R1, *R2, *R3, *R4, *R5, *R6, *R7;
+    i_type n;
 
-            even = (n % 2 == 0);
-            if (!even) {
-                ++n;
-            }
-        }
-    } else {
-        while ((n /= 2) != 1) {
+    LevelEven(i_type n) : n(n) {
+        A11 = new T[n * n];
+        A12 = new T[n * n];
+        A22 = new T[n * n];
+        B11 = new T[n * n];
+        B21 = new T[n * n];
+        B22 = new T[n * n];
+        S1 = new T[n * n];
+        S2 = new T[n * n];
+        S3 = new T[n * n];
+        S4 = new T[n * n];
+        T1 = new T[n * n];
+        T2 = new T[n * n];
+        T3 = new T[n * n];
+        T4 = new T[n * n];
+        R1 = new T[n * n];
+        R2 = new T[n * n];
+        R3 = new T[n * n];
+        R4 = new T[n * n];
+        R5 = new T[n * n];
+        R6 = new T[n * n];
+        R7 = new T[n * n];
+    }
+
+    virtual ~LevelEven() {
+        delete[] A11;
+        delete[] A12;
+        delete[] A22;
+        delete[] B11;
+        delete[] B21;
+        delete[] B22;
+        delete[] S1;
+        delete[] S2;
+        delete[] S3;
+        delete[] S4;
+        delete[] T1;
+        delete[] T2;
+        delete[] T3;
+        delete[] T4;
+        delete[] R1;
+        delete[] R2;
+        delete[] R3;
+        delete[] R4;
+        delete[] R5;
+        delete[] R6;
+        delete[] R7;
+    }
+
+    virtual void SW(const T *A, const T *B, T *C) override;
+};
+
+template<class T>
+struct Winograd<T>::LevelOdd final : public LevelEven {
+    using LP = LevelEven;
+    using LP::A11, LP::A12, LP::A22,
+        LP::B11, LP::B21, LP::B22,
+        LP::S1, LP::S2, LP::S3, LP::S4,
+        LP::T1, LP::T2, LP::T3, LP::T4,
+        LP::R1, LP::R2, LP::R3, LP::R4, LP::R5, LP::R6, LP::R7;
+    using LP::n, LP::next;
+
+    LevelOdd(i_type n) : LevelEven(n) {}
+
+    void SW(const T *A, const T *B, T *C) override;
+};
+
+template<class T>
+Winograd<T>::Winograd(i_type n, i_type square_cap) : n_(n) {
+    bool even = (n % 2 == 0);
+    if (!even) {
+        ++n;
+    }
+    bool cap = false;
+
+    while ((n /= 2) != 1) {
+        if (even)
             L_.push_back(std::make_unique<LevelEven>(n));
+        else
+            L_.push_back(std::make_unique<LevelOdd>(n));
+
+        even = (n % 2 == 0);
+        if (!even) {
+            if (n < square_cap) {
+                std::cout << n << " cap\n";
+                L_.push_back(std::make_unique<LevelClassic>(n));
+                cap = true;
+                break;
+            }
+            ++n;
         }
     }
 
-    
+    if (!cap) {
+        L_.push_back(std::make_unique<Level22>());
+    }
+
+    for (int i = L_.size() - 1; i > 0; --i) {
+        L_[i - 1]->next = &(*L_[i]);
+    }
+
 }
 
 
@@ -124,11 +176,41 @@ void Winograd<T>::Mul(const M &A, const M &B, M &C) {
         A.GetRows() != n_ || B.GetRows() != n_ || C.GetRows() != n_) {
         throw std::invalid_argument("Matrix size not match");
     }
-    sw_helper(A.Data().data(), B.Data().data(), C.Data().data(), n_ + 1, 0);
+    L_[0]->SW(A.Data().data(), B.Data().data(), C.Data().data());
 }
 
 template<class T>
-void Winograd<T>::LevelEven::MxABS(const T *A, const T *B) {
+void Winograd<T>::Level22::SW(const T *A, const T *B, T *C) {
+    T a11 = A[0];
+    T a12 = A[1];
+    T a21 = A[2];
+    T a22 = A[3];
+    T b11 = B[0];
+    T b12 = B[1];
+    T b21 = B[2];
+    T b22 = B[3];
+    C[0] = a11 * b11 + a12 * b21;
+    C[1] = a11 * b12 + a12 * b22;
+    C[2] = a21 * b11 + a22 * b21;
+    C[3] = a21 * b12 + a22 * b22;
+}
+
+template<class T>
+void Winograd<T>::LevelClassic::SW(const T *A, const T *B, T *C) {
+    for (i_type i = 0; i < n; ++i) {
+        for (i_type j = 0; j < n; ++j) {
+            T sum = 0;
+            for (i_type k = 0; k < n; ++k) {
+                sum += A[i * n + k] * B[k * n + j];
+            }
+            C[i * n + j] = sum;
+        }
+    }
+};
+
+template<class T>
+void Winograd<T>::LevelEven::SW(const T *A, const T *B, T *C) {
+
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
             T a11 = A[i * n * 2 + j];
@@ -155,10 +237,17 @@ void Winograd<T>::LevelEven::MxABS(const T *A, const T *B) {
             T4[i * n + j] = b22 - b12 + b11 - b21;
         }
     }
-}
 
-template<class T>
-void Winograd<T>::LevelEven::MxR(T *C) {
+
+    next->SW(A11, B11, R1);
+    next->SW(A12, B21, R2);
+    next->SW(S4, B22, R3);
+    next->SW(A22, T4, R4);
+    next->SW(S1, T1, R5);
+    next->SW(S2, T2, R6);
+    next->SW(S3, T3, R7);
+
+
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
             T r1 = R1[i * n + j];
@@ -174,8 +263,8 @@ void Winograd<T>::LevelEven::MxR(T *C) {
 }
 
 template<class T>
-void Winograd<T>::LevelOdd::MxABS(const T *A, const T *B) {
-    // std::cout << "LevelOdd::MxABS n = " << n << "\n";
+void Winograd<T>::LevelOdd::SW(const T *A, const T *B, T *C) {
+
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
             i_type cn = n * 2 - 1;
@@ -203,18 +292,23 @@ void Winograd<T>::LevelOdd::MxABS(const T *A, const T *B) {
             T4[i * n + j] = b22 - b12 + b11 - b21;
         }
     }
-}
 
-template<class T>
-void Winograd<T>::LevelOdd::MxR(T *C) {
-    Matrix<T> MxR(n * 2);
+
+    next->SW(A11, B11, R1);
+    next->SW(A12, B21, R2);
+    next->SW(S4, B22, R3);
+    next->SW(A22, T4, R4);
+    next->SW(S1, T1, R5);
+    next->SW(S2, T2, R6);
+    next->SW(S3, T3, R7);
+
+
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
             T r1 = R1[i * n + j];
             T r7 = R7[i * n + j];
             T r16 = r1 + R6[i * n + j];
             T r165 = r16 + R5[i * n + j];
-
             i_type cn = n * 2 - 1;
             C[i * cn + j] = r1 + R2[i * n + j];
             if (!(jn == n * 2 - 1))
@@ -225,58 +319,6 @@ void Winograd<T>::LevelOdd::MxR(T *C) {
                 C[in * cn + jn] = r165 + r7;
         }
     }
-}
-
-template<class T>
-void Winograd<T>::LastStep(const T *A, const T *B, T *C) {
-    T a11 = A[0];
-    T a12 = A[1];
-    T a21 = A[2];
-    T a22 = A[3];
-    T b11 = B[0];
-    T b12 = B[1];
-    T b21 = B[2];
-    T b22 = B[3];
-    C[0] = a11 * b11 + a12 * b21;
-    C[1] = a11 * b12 + a12 * b22;
-    C[2] = a21 * b11 + a22 * b21;
-    C[3] = a21 * b12 + a22 * b22;
-}
-
-template<class T>
-void Winograd<T>::sw_helper(const T *A, const T *B, T *C, int n, int l) {
-
-    n /= 2;
-
-    if (n == 1) {
-        T a11 = A[0];
-        T a12 = A[1];
-        T a21 = A[2];
-        T a22 = A[3];
-        T b11 = B[0];
-        T b12 = B[1];
-        T b21 = B[2];
-        T b22 = B[3];
-        C[0] = a11 * b11 + a12 * b21;
-        C[1] = a11 * b12 + a12 * b22;
-        C[2] = a21 * b11 + a22 * b21;
-        C[3] = a21 * b12 + a22 * b22;
-        return;
-    }
-
-    auto &L = *L_[l++].get();
-
-    L.MxABS(A, B);
-
-    sw_helper(L.A11.data(), L.B11.data(), L.R1.data(), n + 1, l);
-    sw_helper(L.A12.data(), L.B21.data(), L.R2.data(), n + 1, l);
-    sw_helper(L.S4.data(), L.B22.data(), L.R3.data(), n + 1, l);
-    sw_helper(L.A22.data(), L.T4.data(), L.R4.data(), n + 1, l);
-    sw_helper(L.S1.data(), L.T1.data(), L.R5.data(), n + 1, l);
-    sw_helper(L.S2.data(), L.T2.data(), L.R6.data(), n + 1, l);
-    sw_helper(L.S3.data(), L.T3.data(), L.R7.data(), n + 1, l);
-
-    L.MxR(C);
 }
 
 

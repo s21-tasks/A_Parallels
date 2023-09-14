@@ -10,32 +10,20 @@
 
 // #include <mpi.h>
 
-namespace s21b {
+namespace s21 {
 
 using namespace s21;
-
-// Matrix(row, col)
-// n m k
-// C(n, m) = A(n, k) * B(k, m)
-
-
-// Matrix(row, col)
-// n m k
-// C(n, m) = A(n, k) * B(k, m)
 
 template<class T>
 class Winograd {
     using M = Matrix<T>;
     using i_type = typename M::i_type;
     using data_t = typename M::base;
-    // using levels = std::vector<std::unique_ptr<Level>>;
 
     public:
-
-        // C(n, m) = A(n, k) * B(k, m)
         Winograd(i_type n, i_type square_cap = 128);
-
         void Mul(const M &A, const M &B, M &C);
+        static void Mul(const M &A, const M &B, M &C);
 
     private:
         struct Level {
@@ -138,21 +126,22 @@ class Winograd {
 
 };
 
+template
+struct Level {
+    virtual void SW(const T *A, const T *B, T *C) = 0;
+    Level *next;
+    virtual ~Level() = default;
+};
+
 template<class T>
 Winograd<T>::Winograd(i_type n, i_type square_cap) : n_(n) {
-    // i_type f = std::cail(std::log2(n));
-
-    // if (n_ & (n_ - 1)) {
-    //     // throw std::invalid_argument("n must be power of 2");
-        
-    // }
     bool even = (n % 2 == 0);
     if (!even) {
         ++n;
     }
     bool cap = false;
-    while ((n /= 2) != 1) {
 
+    while ((n /= 2) != 1) {
         if (even)
             L_.push_back(std::make_unique<LevelEven>(n));
         else
@@ -169,10 +158,7 @@ Winograd<T>::Winograd(i_type n, i_type square_cap) : n_(n) {
             ++n;
         }
     }
-    // while((n /= 2) != 1) {
-    //     // L_.emplace_back(n);
-    //     L_.push_back(std::make_unique<LevelEven>(n));
-    // }
+
     if (!cap) {
         L_.push_back(std::make_unique<Level22>());
     }
