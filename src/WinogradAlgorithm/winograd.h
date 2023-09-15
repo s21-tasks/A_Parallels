@@ -1,18 +1,21 @@
 #pragma once
 
-// #define MATRIX_1D
-
 #include "../sub/matrix/matrix.h"
 
 #include <vector>
 #include <thread>
 #include <memory>
 
-// #include <mpi.h>
+#ifdef LEVEL_LOAD_TEST__P
+    #include <map>
+    #include "../sub/utility/m_time.h"
+#endif
 
 namespace s21 {
 
 using namespace s21;
+
+namespace Basic {
 
 template<class T>
 class Winograd {
@@ -21,35 +24,46 @@ class Winograd {
     using data_t = typename M::base;
 
     public:
-        Winograd(i_type n, i_type square_cap = 128);
-        void Mul(const M &A, const M &B, M &C);
-        // static void Mul(const M &A, const M &B, M &C);
+        Winograd(i_type n, i_type odd_cap = 25, i_type winograd_cap = 15);
+        void Execute(const M &A, const M &B, M &C);
+        static void Mul(const M &A, const M &B, M &C,
+                        i_type odd_cap = 25, i_type winograd_cap = 15);
+        
+        virtual ~Winograd() = default;
 
-    private:
+#ifdef LEVEL_LOAD_TEST__P
+    public:
+#else
+    protected:
+#endif
+        Winograd() = default;
+
         struct Level;
         struct LevelEven;
         struct LevelOdd;
 
-        struct LevelClassic final : public Level {
-            i_type n;
-            using Level::next;
+        struct LevelClassic;
+        struct Level22;
 
-            LevelClassic(i_type n) : n(n) {}
-
-            void SW(const T *A, const T *B, T *C) override;
-        };
-
-        struct Level22 final : public Level {
-            using Level::next;
-
-            void SW(const T *A, const T *B, T *C) override;   
-        };
+        struct PointerBase;
         
         std::vector<std::unique_ptr<Level>> L_;
 
         i_type n_;
-
 };
+
+template<class T>
+void Winograd<T>::Mul(const M &A, const M &B, M &C,
+            i_type odd_cap, i_type winograd_cap) {
+
+    i_type n = A.GetCols();
+    if (B.GetCols() != n || C.GetCols() != n ||
+        A.GetRows() != n || B.GetRows() != n || C.GetRows() != n) {
+        throw std::invalid_argument("Matrix size not match");
+    }
+    Winograd<T> W(n, odd_cap, winograd_cap);
+    W.Execute(A, B, C);
+}
 
 template<class T>
 struct Winograd<T>::Level {
@@ -59,104 +73,94 @@ struct Winograd<T>::Level {
 };
 
 template<class T>
-struct Winograd<T>::LevelEven : public Level {
-    using Level::next;
-
+struct Winograd<T>::PointerBase {
     T *A11, *A12, *A22, *B11, *B21, *B22;
     T *S1, *S2, *S3, *S4, *T1, *T2, *T3, *T4;
     T *R1, *R2, *R3, *R4, *R5, *R6, *R7;
     i_type n;
 
-    LevelEven(i_type n) : n(n) {
-        A11 = new T[n * n];
-        A12 = new T[n * n];
-        A22 = new T[n * n];
-        B11 = new T[n * n];
-        B21 = new T[n * n];
-        B22 = new T[n * n];
-        S1 = new T[n * n];
-        S2 = new T[n * n];
-        S3 = new T[n * n];
-        S4 = new T[n * n];
-        T1 = new T[n * n];
-        T2 = new T[n * n];
-        T3 = new T[n * n];
-        T4 = new T[n * n];
-        R1 = new T[n * n];
-        R2 = new T[n * n];
-        R3 = new T[n * n];
-        R4 = new T[n * n];
-        R5 = new T[n * n];
-        R6 = new T[n * n];
-        R7 = new T[n * n];
-    }
+    PointerBase(i_type n);
+    virtual ~PointerBase();
+};
 
-    virtual ~LevelEven() {
-        delete[] A11;
-        delete[] A12;
-        delete[] A22;
-        delete[] B11;
-        delete[] B21;
-        delete[] B22;
-        delete[] S1;
-        delete[] S2;
-        delete[] S3;
-        delete[] S4;
-        delete[] T1;
-        delete[] T2;
-        delete[] T3;
-        delete[] T4;
-        delete[] R1;
-        delete[] R2;
-        delete[] R3;
-        delete[] R4;
-        delete[] R5;
-        delete[] R6;
-        delete[] R7;
-    }
+template<class T>
+struct Winograd<T>::LevelEven : public Level, public PointerBase {
+    using Level::next;
+    using PB = PointerBase;
+    using PB::n;
+    using PB::A11, PB::A12, PB::A22, PB::B11, PB::B21, PB::B22,
+        PB::S1, PB::S2, PB::S3, PB::S4, PB::T1, PB::T2, PB::T3, PB::T4,
+        PB::R1, PB::R2, PB::R3, PB::R4, PB::R5, PB::R6, PB::R7;
 
+#ifdef LEVEL_LOAD_TEST__P
+    inline static std::map<i_type, int64_t> level_load;
+#endif
+
+    LevelEven(i_type n) : PointerBase(n) {}
+    virtual ~LevelEven() = default;
     virtual void SW(const T *A, const T *B, T *C) override;
 };
 
 template<class T>
-struct Winograd<T>::LevelOdd final : public LevelEven {
-    using LP = LevelEven;
-    using LP::A11, LP::A12, LP::A22,
-        LP::B11, LP::B21, LP::B22,
-        LP::S1, LP::S2, LP::S3, LP::S4,
-        LP::T1, LP::T2, LP::T3, LP::T4,
-        LP::R1, LP::R2, LP::R3, LP::R4, LP::R5, LP::R6, LP::R7;
-    using LP::n, LP::next;
+struct Winograd<T>::LevelOdd : public Level, public PointerBase {
+    using Level::next;
+    using PB = PointerBase;
+    using PB::n;
+    using PB::A11, PB::A12, PB::A22, PB::B11, PB::B21, PB::B22,
+        PB::S1, PB::S2, PB::S3, PB::S4, PB::T1, PB::T2, PB::T3, PB::T4,
+        PB::R1, PB::R2, PB::R3, PB::R4, PB::R5, PB::R6, PB::R7;
+    
+#ifdef LEVEL_LOAD_TEST__P
+    inline static std::map<i_type, int64_t> level_load;
+#endif
 
-    LevelOdd(i_type n) : LevelEven(n) {}
+    LevelOdd(i_type n) : PointerBase(n) {}
+    virtual ~LevelOdd() = default;
+    virtual void SW(const T *A, const T *B, T *C) override;
+};
 
+template<class T>
+struct Winograd<T>::LevelClassic final : public Level {
+    i_type n;
+
+#ifdef LEVEL_LOAD_TEST__P
+    inline static int64_t load;
+#endif
+
+    LevelClassic(i_type n) : n(n) {}
     void SW(const T *A, const T *B, T *C) override;
 };
 
 template<class T>
-Winograd<T>::Winograd(i_type n, i_type square_cap) : n_(n) {
-    bool even = (n % 2 == 0);
-    if (!even) {
-        ++n;
-    }
+struct Winograd<T>::Level22 final : public Level {
+    using Level::next;
+
+#ifdef LEVEL_LOAD_TEST__P
+    inline static int64_t load;
+#endif
+
+    void SW(const T *A, const T *B, T *C) override;   
+};
+
+template<class T>
+Winograd<T>::Winograd(i_type n, i_type odd_cap, i_type winograd_cap) : n_(n) {
+    bool odd = (n % 2 != 0);
+    n += odd;
     bool cap = false;
 
     while ((n /= 2) != 1) {
-        if (even)
-            L_.push_back(std::make_unique<LevelEven>(n));
-        else
-            L_.push_back(std::make_unique<LevelOdd>(n));
-
-        even = (n % 2 == 0);
-        if (!even) {
-            if (n < square_cap) {
-                std::cout << n << " cap\n";
-                L_.push_back(std::make_unique<LevelClassic>(n));
-                cap = true;
-                break;
-            }
-            ++n;
+        if ((odd && n < odd_cap) || n * 2 < winograd_cap) {
+            L_.push_back(std::make_unique<LevelClassic>(n * 2 - odd));
+            cap = true;
+            break;
         }
+        if (odd)
+            L_.push_back(std::make_unique<LevelOdd>(n));
+        else
+            L_.push_back(std::make_unique<LevelEven>(n));
+
+        odd = (n % 2 != 0);
+        n += odd;
     }
 
     if (!cap) {
@@ -171,7 +175,7 @@ Winograd<T>::Winograd(i_type n, i_type square_cap) : n_(n) {
 
 
 template<class T>
-void Winograd<T>::Mul(const M &A, const M &B, M &C) {
+void Winograd<T>::Execute(const M &A, const M &B, M &C) {
     if (A.GetCols() != n_ || B.GetCols() != n_ || C.GetCols() != n_ ||
         A.GetRows() != n_ || B.GetRows() != n_ || C.GetRows() != n_) {
         throw std::invalid_argument("Matrix size not match");
@@ -181,6 +185,10 @@ void Winograd<T>::Mul(const M &A, const M &B, M &C) {
 
 template<class T>
 void Winograd<T>::Level22::SW(const T *A, const T *B, T *C) {
+#ifdef LEVEL_LOAD_TEST__P
+    auto time_point = Time::Now();
+#endif
+
     T a11 = A[0];
     T a12 = A[1];
     T a21 = A[2];
@@ -193,10 +201,17 @@ void Winograd<T>::Level22::SW(const T *A, const T *B, T *C) {
     C[1] = a11 * b12 + a12 * b22;
     C[2] = a21 * b11 + a22 * b21;
     C[3] = a21 * b12 + a22 * b22;
+
+#ifdef LEVEL_LOAD_TEST__P
+    load += Time::Duration<Time::ns>(time_point);
+#endif
 }
 
 template<class T>
 void Winograd<T>::LevelClassic::SW(const T *A, const T *B, T *C) {
+#ifdef LEVEL_LOAD_TEST__P
+    auto time_point = Time::Now();
+#endif
     for (i_type i = 0; i < n; ++i) {
         for (i_type j = 0; j < n; ++j) {
             T sum = 0;
@@ -206,10 +221,17 @@ void Winograd<T>::LevelClassic::SW(const T *A, const T *B, T *C) {
             C[i * n + j] = sum;
         }
     }
+#ifdef LEVEL_LOAD_TEST__P
+    load += Time::Duration<Time::ns>(time_point);
+#endif
 };
 
 template<class T>
 void Winograd<T>::LevelEven::SW(const T *A, const T *B, T *C) {
+
+#ifdef LEVEL_LOAD_TEST__P
+    auto time_point = Time::Now();
+#endif
 
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
@@ -238,6 +260,10 @@ void Winograd<T>::LevelEven::SW(const T *A, const T *B, T *C) {
         }
     }
 
+#ifdef LEVEL_LOAD_TEST__P
+    level_load[n] += Time::Duration<Time::ns>(time_point);
+#endif
+
 
     next->SW(A11, B11, R1);
     next->SW(A12, B21, R2);
@@ -246,6 +272,10 @@ void Winograd<T>::LevelEven::SW(const T *A, const T *B, T *C) {
     next->SW(S1, T1, R5);
     next->SW(S2, T2, R6);
     next->SW(S3, T3, R7);
+
+#ifdef LEVEL_LOAD_TEST__P
+    time_point = Time::Now();
+#endif
 
 
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
@@ -260,10 +290,19 @@ void Winograd<T>::LevelEven::SW(const T *A, const T *B, T *C) {
             C[in * n * 2 + jn] = r165 + r7;
         }
     }
+
+#ifdef LEVEL_LOAD_TEST__P
+    level_load[n] += Time::Duration<Time::ns>(time_point);
+#endif
+
 }
 
 template<class T>
 void Winograd<T>::LevelOdd::SW(const T *A, const T *B, T *C) {
+
+#ifdef LEVEL_LOAD_TEST__P
+    auto time_point = Time::Now();
+#endif
 
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
         for (i_type j = 0, jn = n; j < n; ++j, ++jn) {
@@ -292,7 +331,9 @@ void Winograd<T>::LevelOdd::SW(const T *A, const T *B, T *C) {
             T4[i * n + j] = b22 - b12 + b11 - b21;
         }
     }
-
+#ifdef LEVEL_LOAD_TEST__P
+    level_load[n] += Time::Duration<Time::ns>(time_point);
+#endif
 
     next->SW(A11, B11, R1);
     next->SW(A12, B21, R2);
@@ -301,6 +342,10 @@ void Winograd<T>::LevelOdd::SW(const T *A, const T *B, T *C) {
     next->SW(S1, T1, R5);
     next->SW(S2, T2, R6);
     next->SW(S3, T3, R7);
+
+#ifdef LEVEL_LOAD_TEST__P
+    time_point = Time::Now();
+#endif
 
 
     for (i_type i = 0, in = n; i < n; ++i, ++in) {
@@ -319,8 +364,62 @@ void Winograd<T>::LevelOdd::SW(const T *A, const T *B, T *C) {
                 C[in * cn + jn] = r165 + r7;
         }
     }
+#ifdef LEVEL_LOAD_TEST__P
+    level_load[n] += Time::Duration<Time::ns>(time_point);
+#endif
 }
 
+template<class T>
+Winograd<T>::PointerBase::PointerBase(i_type n) : n(n) {
+    A11 = new T[n * n];
+    A12 = new T[n * n];
+    A22 = new T[n * n];
+    B11 = new T[n * n];
+    B21 = new T[n * n];
+    B22 = new T[n * n];
+    S1 = new T[n * n];
+    S2 = new T[n * n];
+    S3 = new T[n * n];
+    S4 = new T[n * n];
+    T1 = new T[n * n];
+    T2 = new T[n * n];
+    T3 = new T[n * n];
+    T4 = new T[n * n];
+    R1 = new T[n * n];
+    R2 = new T[n * n];
+    R3 = new T[n * n];
+    R4 = new T[n * n];
+    R5 = new T[n * n];
+    R6 = new T[n * n];
+    R7 = new T[n * n];
+}
+
+template<class T>
+Winograd<T>::PointerBase::~PointerBase() {
+    delete[] A11;
+    delete[] A12;
+    delete[] A22;
+    delete[] B11;
+    delete[] B21;
+    delete[] B22;
+    delete[] S1;
+    delete[] S2;
+    delete[] S3;
+    delete[] S4;
+    delete[] T1;
+    delete[] T2;
+    delete[] T3;
+    delete[] T4;
+    delete[] R1;
+    delete[] R2;
+    delete[] R3;
+    delete[] R4;
+    delete[] R5;
+    delete[] R6;
+    delete[] R7;
+}
+
+} // namespase Basic
 
 } // namespace s21
 
