@@ -47,12 +47,12 @@ namespace s21 {
 
 
     void SpeedTest() {
-      int64_t usual_time = Time::Test([&] {return gauss.UsualExecute();});
-      std::cout << "Usual time: " << usual_time << std::endl;
       for (int i = 1; i <= 10; ++i) {
         int64_t parallel_time = Time::Test([&] {return gauss.ParallelExecute(i);});
         std::cout << "Parralel time with " << i << " threads: " << parallel_time << std::endl;
       }
+      int64_t usual_time = Time::Test([&] {return gauss.UsualExecute();});
+      std::cout << "Usual time: " << usual_time << std::endl;
     }
 
 
@@ -73,12 +73,8 @@ namespace s21 {
       SStr::Print(sol);
     }
 
-
-
-
   private:
     SLAEGauss gauss;
 
   };
-
 } // s21

@@ -4,9 +4,6 @@ namespace s21 {
 
   SLAEGauss::SLAEGauss() = default;
 
-
-
-
   SLAEGauss::SLAEGauss(const Matrix<double> &m, const std::vector<double> &consts){
     set_equations(m,consts);
   }
@@ -43,25 +40,37 @@ namespace s21 {
 
 
   std::vector<double> SLAEGauss::ParallelExecute(unsigned threads) {
-    ThreadPool pool(threads);
-    for (int k = 0; k < n - 1; ++k) {
-      for (int i = k + 1; i < n; ++i) {
-        double factor = matrix[i][k] / matrix[k][k];
-        constants[i] -= factor * constants[k];
-        for (int j = k; j < n; ++j) {
-          pool.AddTask([=]() { matrix(i, j) -= factor * matrix(k, j); });
-        }
-        pool.WaitForComplete();
-      }
-    }
+      std::vector<std::thread> t;
+      t.reserve(threads);
 
-    for (int i = n - 1; i >= 0; --i) {
-      double sum = 0;
-      for (int j = i + 1; j < n; ++j)
-        pool.AddTask([=, &sum]() { sum += matrix(i, j) * solution[j]; });
-      pool.WaitForComplete();
-      solution[i] = (constants[i] - sum) / matrix[i][i];
-    }
+      for (int k = 0; k < n - 1; ++k) {
+          int iters = (n-(k+1))/threads;
+          for (int tr = 0; tr < threads; ++tr) {
+              std::thread q([&]{
+                  for (int i = (k + 1)+(iters*tr); i < (k + 1)+(iters*(tr+1)); ++i) {
+                      if (i>=constants.size())
+                          break;
+                      double factor = matrix[i][k] / matrix[k][k];
+                      constants[i] -= factor * constants[k];
+                      for (int j = k; j < n; ++j) {
+                          matrix[i][j] -= factor * matrix[k][j];
+                      }
+                  }
+              });
+              t.push_back(std::move(q));
+          }
+          for (int ii = 0; ii < t.size(); ++ii)
+              t[ii].join();
+          t.clear();
+
+      }
+
+      for (int i = n-1; i >=0;--i) {
+          double sum = 0;
+          for (int j = i + 1; j < n; ++j)
+              sum += matrix[i][j] * solution[j];
+          solution[i] = (constants[i] - sum) / matrix[i][i];
+      }
     return solution;
   }
 
