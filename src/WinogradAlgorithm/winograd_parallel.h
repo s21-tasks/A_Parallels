@@ -44,7 +44,7 @@ class Winograd : public Basic::Winograd<T> {
 template<class T>
 void Winograd<T>::Mul(const M &A, const M &B, M &C, i_type odd_cap, i_type winograd_cap) {
     i_type n = A.GetCols();
-    if (B.GetCols() != n || C.GetCols() != n ||
+    if (n <= 1 || B.GetCols() != n || C.GetCols() != n ||
         A.GetRows() != n || B.GetRows() != n || C.GetRows() != n) {
         throw std::invalid_argument("Matrix size not match");
     }
@@ -102,8 +102,10 @@ void Winograd<T>::PushLevel(int n) {
 
 template<class T>
 Winograd<T>::Winograd(i_type n, i_type odd_cap, i_type winograd_cap) : BW() {
+    if (n <= 1) {
+        throw std::invalid_argument("Matrix size must be greater than 1");
+    }
     n_ = n;
-
     bool odd = (n % 2 != 0);
     bool start_odd = odd;
     n += odd;

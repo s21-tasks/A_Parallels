@@ -47,12 +47,10 @@ void Functional(unsigned int N,
     TEST(ERROR_CLASS, __##N##x##M##_dot_##K##x##L) { \
         Matrix<float> A(N, M); \
         Matrix<float> B(K, L); \
-        PREFIX::Winograd<float> w(N); \
-        EXPECT_ANY_THROW(w.Mul(A, B, A)); \
+        Matrix<float> C(N, L); \
+        EXPECT_ANY_THROW(PREFIX::Winograd<float>::Mul(A, B, C)); \
     }
 
-__ONE_SIZE_TEST(int, 0)
-__ONE_SIZE_TEST(float, 1)
 __ONE_SIZE_TEST(double, 2)
 __ONE_SIZE_TEST(long double, 3)
 __ONE_SIZE_TEST(int, 4)
@@ -65,10 +63,11 @@ __ONE_SIZE_TEST(unsigned long, 10)
 __ONE_SIZE_TEST(unsigned long long, 11)
 __ONE_SIZE_TEST(char, 12)
 __ONE_SIZE_TEST(unsigned char, 13)
+__ONE_SIZE_TEST(float, 14)
 
 
-TEST(FUNCTIONAL_CLASS, __from_14x14_to_64x64) {
-    for (unsigned int k = 14; k <= 64; ++k) {
+TEST(FUNCTIONAL_CLASS, __from_15x15_to_64x64) {
+    for (unsigned int k = 15; k <= 64; ++k) {
         Functional<double>(k, Random::Normal(0.0, 15.5), Random::Normal(-0.5, 1579.9));
     }
 }
@@ -84,6 +83,8 @@ __ERROR_TEST(5, 6, 6, 5)
 __ERROR_TEST(5, 6, 6, 7)
 __ERROR_TEST(5, 6, 7, 8)
 __ERROR_TEST(1, 2, 3, 4)
+__ERROR_TEST(1, 1, 1, 1)
+__ERROR_TEST(0, 0, 0, 0)
 
 
 
