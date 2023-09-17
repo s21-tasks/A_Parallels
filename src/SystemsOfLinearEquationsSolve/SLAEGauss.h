@@ -3,7 +3,8 @@
 #include <thread>
 #include <vector>
 #include <cmath>
-
+#include <condition_variable>
+#include <mutex>
 #include "matrix.h"
 
 namespace s21 {
