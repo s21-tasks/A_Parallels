@@ -9,47 +9,56 @@
 #include <mutex>
 #include <condition_variable>
 
-#include "../sub/thread_pool/thread_pool.h"
+template<typename T>
+bool compare_results(s21::Matrix<T> m, std::vector<T> v, std::vector<T> result) {
+  s21::SLAEGauss gauss(m,v);
+  std::vector<T> sol = gauss.UsualExecute();
+    if (sol != result)
+      return false;
+    for (int i = 1; i <= 10; ++i) {
+      sol = gauss.ParallelExecute(i);
+      if (sol != result)
+        return false;
+    }
+  return true;
+}
 
 void gauss_test() {
   s21::Matrix<double> m{{2,-1,0},
                         {-1,1,4},
                         {1,2,3}};
   std::vector<double> v{0,13,14};
-  s21::SLAEGauss gauss(m,v,2);
-  auto sol = gauss.UsualExecute();
-  for (double & a : sol) {
-    std::cout << a << " ";
-  }
-  std::cout << std::endl;
-
-  auto sol2 = gauss.ParallelExecute();
-  for (double & a : sol2) {
-    std::cout << a << " ";
-  }
-  std::cout << std::endl;
-
+  std::vector<double> result{1,2,3};
 }
 
-void pool_test_func(const int number = 0, int sleep = 0) {
-  std::cout << "func " << number << " start running at " << std::this_thread::get_id() << std::endl;
-  std::this_thread::sleep_for(std::chrono::seconds(sleep));
-  std::cout << "func " << number << " end running" << std::endl;
+void gauss_test_4x4() {
+  s21::Matrix<double> m{{5,3,2,-8},
+                        {1,1,1,1},
+                        {3,5,1,4},
+                        {4,2,3,1}};
+  std::vector<double> v{1,0,0,3};
+
 }
 
 
 int main() {
-//  s21::ThreadPool pool(4);
-//  int num = 10;
-//  for (int i = 0; i < num; ++i) {
-//    int r = i;
-//    pool.AddTask([i] { return pool_test_func(i, 0); });
-//  }
-//  pool.WaitForComplete();
-//  std::cout << "all end" << std::endl;
-  for (int i = 0; i < 50; ++i) {
-    gauss_test();
-    std::cout << i << std::endl;
-  }
+  s21::Matrix<double> m{{2,-1,0},
+                        {-1,1,4},
+                        {1,2,3}};
+  std::vector<double> v{0,13,14};
+  std::vector<double> result{1,2,3};
+  if (compare_results(m,v,result))
+    std::cout  << "1st test ok"<< std::endl;
+
+  s21::Matrix<double> m2{{5,3,2,-8},
+                        {1,1,1,1},
+                        {3,5,1,4},
+                        {4,2,3,1}};
+  std::vector<double> v2{1,0,0,3};
+  std::vector<double> result2{7,-8,-5,6};
+  if (compare_results(m2,v2,result2))
+    std::cout  << "2nd test ok"<< std::endl;
+
+
   return 0;
 }

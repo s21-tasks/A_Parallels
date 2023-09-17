@@ -2,6 +2,7 @@
 
 #include "matrix.h"
 #include <vector>
+#include <thread>
 
 namespace s21 {
 

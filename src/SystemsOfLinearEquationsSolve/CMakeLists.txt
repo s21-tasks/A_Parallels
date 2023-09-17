@@ -5,7 +5,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 add_subdirectory(../sub/matrix ${CMAKE_BINARY_DIR}/matrix)
-add_subdirectory(../sub/Utility ${CMAKE_BINARY_DIR}/utility)
+add_subdirectory(../sub/utility ${CMAKE_BINARY_DIR}/utility)
 add_subdirectory(../sub/ConsoleInterface ${CMAKE_BINARY_DIR}/interface)
 
 #add_subdirectory(../sub/thread_pool ${CMAKE_BINARY_DIR}/thread_pool)

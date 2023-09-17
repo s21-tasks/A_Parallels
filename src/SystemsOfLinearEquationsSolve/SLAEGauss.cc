@@ -46,7 +46,7 @@ namespace s21 {
       for (int k = 0; k < n - 1; ++k) {
           int iters = (n-(k+1))/threads;
           for (int tr = 0; tr < threads; ++tr) {
-              std::thread q([&]{
+              t.emplace_back([k, this, iters, tr]{
                   for (int i = (k + 1)+(iters*tr); i < (k + 1)+(iters*(tr+1)); ++i) {
                       if (i>=constants.size())
                           break;
@@ -57,7 +57,6 @@ namespace s21 {
                       }
                   }
               });
-              t.push_back(std::move(q));
           }
           for (int ii = 0; ii < t.size(); ++ii)
               t[ii].join();

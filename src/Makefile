@@ -2,7 +2,7 @@
 
 all:
 
-gauss_test:
+gauss:
 	mkdir -p SystemsOfLinearEquationsSolve/build
 	cmake -B"SystemsOfLinearEquationsSolve/build" SystemsOfLinearEquationsSolve/.
 	make -C SystemsOfLinearEquationsSolve/build/.
