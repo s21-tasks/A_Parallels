@@ -1,7 +1,6 @@
 #pragma once
 
 #include "matrix.h"
-#include "../sub/thread_pool/thread_pool.h"
 #include <vector>
 
 namespace s21 {
