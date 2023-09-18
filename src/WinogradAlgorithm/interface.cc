@@ -8,7 +8,6 @@
 
 #include <functional>
 
-
 using namespace s21;
 
 // class TwoDouble : public Input {
@@ -18,43 +17,44 @@ using namespace s21;
 // };
 
 class Interface : public ConsoleInterface {
-  public:
-    Interface();
+ public:
+  Interface();
 
-  private:
-    
-    using type = double;
-    using M = Matrix<type>;
-    M A;
-    M B;
+ private:
+  using type = double;
+  using M = Matrix<type>;
+  M A;
+  M B;
 
-    struct TwoDouble : public Input {
-      TwoDouble(Interface *ci, AbsMenu *next_menu) : Input(ci, next_menu) {}
-      void Func() override;
-    };
-    struct MatrixInput : public Input {
-      MatrixInput(Interface *ci, AbsMenu *next_menu) : Input(ci, next_menu) {}
-      void Func() override;
-    };
-    struct InputSize : public OneValueInput<unsigned int> {
-      InputSize(Interface *ci, AbsMenu *next_menu);
-    };
-    template<class Alg>
-    void Multiply() {
-      M C(A.GetCols());
-      Alg::Mul(A, B, C);
-      std::cout << "\nResult Matrix:\n" << C << "\n\n";
-    }
-    void TimeTest();
+  struct TwoDouble : public Input {
+    TwoDouble(Interface *ci, AbsMenu *next_menu) : Input(ci, next_menu) {}
+    void Func() override;
+  };
+  struct MatrixInput : public Input {
+    MatrixInput(Interface *ci, AbsMenu *next_menu) : Input(ci, next_menu) {}
+    void Func() override;
+  };
+  struct InputSize : public OneValueInput<unsigned int> {
+    InputSize(Interface *ci, AbsMenu *next_menu);
+  };
+  template <class Alg>
+  void Multiply() {
+    M C(A.GetCols());
+    Alg::Mul(A, B, C);
+    std::cout << "\nResult Matrix:\n" << C << "\n\n";
+  }
+  void TimeTest();
 };
 
-Interface::InputSize::InputSize(Interface *ci, AbsMenu *next_menu) :
-    OneValueInput(ci, next_menu, [&](unsigned int &size) {
-      Interface *i = reinterpret_cast<Interface *>(ci_);
-      i->A = M(size);
-      i->B = M(size);
-    }, "matrix size") {}
-
+Interface::InputSize::InputSize(Interface *ci, AbsMenu *next_menu)
+    : OneValueInput(
+          ci, next_menu,
+          [&](unsigned int &size) {
+            Interface *i = reinterpret_cast<Interface *>(ci_);
+            i->A = M(size);
+            i->B = M(size);
+          },
+          "matrix size") {}
 
 void Interface::TwoDouble::Func() {
   Style::InputRequest({"mean", "standard deviation"});
@@ -77,46 +77,30 @@ void Interface::MatrixInput::Func() {
   }
 }
 
-void Interface::TimeTest() {
-
-}
+void Interface::TimeTest() {}
 
 Interface::Interface() {
-  auto home_menu = AddMenu(
-      {"Random Matrices",
-      "Input Matrices from console",
-      "Print Matrices",
-      "Multiply",
-      "Time Test"});
-  
-  home_menu->Connect(0,
-    AddInput(
-      new InputSize(
-        this,
-        new TwoDouble(this, home_menu)
-      )
-    )
-  );
+  auto home_menu = AddMenu({"Random Matrices", "Input Matrices from console",
+                            "Print Matrices", "Multiply", "Time Test"});
 
-  home_menu->Connect(1,
-    AddInput(
-      new InputSize(
-        this,
-        new MatrixInput(this, home_menu)
-      )
-    )
-  );
+  home_menu->Connect(
+      0, AddInput(new InputSize(this, new TwoDouble(this, home_menu))));
+
+  home_menu->Connect(
+      1, AddInput(new InputSize(this, new MatrixInput(this, home_menu))));
 
   home_menu->Connect(2, home_menu, [&] {
     std::cout << "\nMatrix A:\n" << A << "\n\nMatrix B:\n" << B << "\n\n";
   });
 
-  auto mul_menu = AddMenu({"Basic Winograd", "Parallel Winograd", "Pipeline Winograd", "Standart", "All"});
+  auto mul_menu = AddMenu({"Basic Winograd", "Parallel Winograd",
+                           "Pipeline Winograd", "Standart", "All"});
 
   home_menu->Connect(3, mul_menu);
 
   mul_menu->Connect(0, home_menu, [&] { Multiply<Basic::Winograd<type>>(); });
-  mul_menu->Connect(1, home_menu, [&] { Multiply<Parallel::Winograd<type>>(); });
+  mul_menu->Connect(1, home_menu,
+                    [&] { Multiply<Parallel::Winograd<type>>(); });
   mul_menu->Connect(2, home_menu, [&] { Multiply<M>(); });
   mul_menu->Connect(3, home_menu, [&] { Multiply<M>(); });
   mul_menu->Connect(4, home_menu, [&] {
@@ -131,16 +115,16 @@ Interface::Interface() {
     std::cout << '\n';
   });
 
-  auto time_menu = AddMenu({"Basic Winograd", "Parallel Winograd", "Pipeline Winograd", "Standart", "Standart Parallel", "Blas", "All"});
+  auto time_menu =
+      AddMenu({"Basic Winograd", "Parallel Winograd", "Pipeline Winograd",
+               "Standart", "Standart Parallel", "Blas", "All"});
 
-  home_menu->Connect(4,
-    new OneValueInput<unsigned int>(this, home_menu, [&] (unsigned int repeat) {
+  home_menu->Connect(4, new OneValueInput<unsigned int>(
+                            this, home_menu,
+                            [&](unsigned int repeat) {
 
-    }, "repeats"));
-
-
-
-
+                            },
+                            "repeats"));
 }
 
 int main() {
@@ -153,4 +137,3 @@ int main() {
 
   return 0;
 }
-

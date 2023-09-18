@@ -3,7 +3,6 @@
 // #include "winograd.h"
 // #include "winograd_parallel.h"
 
-
 // class Interface : public ConsoleInterface {
 //  public:
 //   Interface();

@@ -2,9 +2,9 @@
 
 #include <limits>
 
-#include "Helpers.h"
 #include "../sub/Matrix/Matrix.h"
 #include "../sub/Utility/Utility.h"
+#include "Helpers.h"
 
 namespace s21 {
 
@@ -85,9 +85,7 @@ class Ant {
   void Run();
   void Clear();
 
-  const TsmResult &GetRoute() const {
-    return route_;
-  }
+  const TsmResult &GetRoute() const { return route_; }
 
  private:
   friend class AntColony<T>;
@@ -116,7 +114,6 @@ AntColony<T>::AntColony(const Matrix<T> &graph, double alpha, double beta,
       Q_(0.0),
       pheromone_(size_, size_, defult_pheromone),
       result_(INFINITY, std::vector<int>(size_ + 1, 0)) {
-  
   // for (int k = 0; k < ants_count_k * size_; ++k) {
   //   ants_.emplace_back(*this);
   // }

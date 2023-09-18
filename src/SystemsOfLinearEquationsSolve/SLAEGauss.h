@@ -1,10 +1,11 @@
 #pragma once
 
-#include <thread>
-#include <vector>
 #include <cmath>
 #include <condition_variable>
 #include <mutex>
+#include <thread>
+#include <vector>
+
 #include "matrix.h"
 
 namespace s21 {

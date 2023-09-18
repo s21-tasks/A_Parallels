@@ -3,9 +3,21 @@ HEADERS := $(shell find . -name "*.h")
 
 .PHONY: submodules
 
-all: gauss
+all: ant gauss winograd
 
-clean: clean_gauss
+clean: clean_gauss clean_ant clean_winograd
+
+ant:
+
+
+clean_ant:
+
+
+winograd:
+
+
+clean_winograd:
+
 
 gauss:
 	mkdir -p SystemsOfLinearEquationsSolve/build
