@@ -1,3 +1,0 @@
-[submodule "src/sub"]
-	path = src/sub
-	url = git@github.com:maykitbo/cpp_libs.git
