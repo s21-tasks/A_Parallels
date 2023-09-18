@@ -1,7 +1,7 @@
 SRC := $(shell find . -name "*.cc")
 HEADERS := $(shell find . -name "*.h")
 
-.PHONY: submodules
+.PHONY: all clean ant clean_ant winograd clean_winograd gauss gauss_run clean_gauss lint get_lint echo
 
 all: ant gauss winograd
 
@@ -29,9 +29,6 @@ gauss_run: gauss
 
 clean_gauss:
 	rm -rf SystemsOfLinearEquationsSolve/build
-
-submodules:
-	cd ..; git submodule update --init --recursive; git submodule update --recursive --remote
 
 lint:
 	@clang-format --style=Google --Werror --dry-run $(SRC) $(HEADERS) && echo "Clang-format passed"
