@@ -3,13 +3,15 @@
 #include "../sub/matrix/matrix.h"
 
 #include <vector>
-#include <thread>
+// #include <thread>
 #include <memory>
 
 #ifdef LEVEL_LOAD_TEST__P
     #include <map>
     #include "../sub/utility/m_time.h"
 #endif
+
+#define EVIL 7
 
 namespace s21 {
 
@@ -144,6 +146,7 @@ struct Winograd<T>::Level22 final : public Level {
 
 template<class T>
 Winograd<T>::Winograd(i_type n, i_type odd_cap, i_type winograd_cap) : n_(n) {
+    std::cout << "Winograd constructor\n";
     if (n <= 1) {
         throw std::invalid_argument("Matrix size must be greater than 1");
     }
@@ -181,9 +184,11 @@ template<class T>
 void Winograd<T>::Execute(const M &A, const M &B, M &C) {
     if (A.GetCols() != n_ || B.GetCols() != n_ || C.GetCols() != n_ ||
         A.GetRows() != n_ || B.GetRows() != n_ || C.GetRows() != n_) {
-        throw std::invalid_argument("Matrix size not match");
+        throw std::invalid_argument("Matrix size not match " + std::to_string(n_) +
+            " != " + std::to_string(A.GetCols()) + " || " + std::to_string(B.GetCols()) + " || " + std::to_string(C.GetCols()) +
+            " || " + std::to_string(A.GetRows()) + " || " + std::to_string(B.GetRows()) + " || " + std::to_string(C.GetRows()));
     }
-    L_[0]->SW(A.Data().data(), B.Data().data(), C.Data().data());
+    L_[0]->SW(A.Data(), B.Data(), C.Data());
 }
 
 template<class T>

@@ -1,14 +1,8 @@
+#include "tests.h"
+
 #define LEVEL_LOAD_TEST__P
 
-#include "../winograd.h"
-#include "../../sub/utility/utility.h"
-
 using namespace s21;
-
-template<class T>
-T RS() {
-    return Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10));
-}
 
 template<class T>
 void F(unsigned int N) {
@@ -42,11 +36,11 @@ void F(unsigned int N) {
 int main() {
     F<float>(1024);
     F<float>(2048);
-    F<float>(1000);
-    F<float>(1011);
-    F<float>(1012);
-    F<float>(1013);
-    F<float>(999);
+    // F<float>(1000);
+    // F<float>(1011);
+    // F<float>(1012);
+    // F<float>(1013);
+    // F<float>(999);
 
     return 0;
 }

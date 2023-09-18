@@ -1,6 +1,4 @@
-#include "../winograd.h"
-#include "../winograd_parallel.h"
-#include "../../sub/utility/utility.h"
+#include "tests.h"
 #include "../../sub/matrix/blas.h"
 
 #include <fstream>
@@ -8,14 +6,10 @@
 
 using namespace s21;
 
-template<class T>
-T RS() {
-    return Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10));
-}
-
 template<class T, class Unit>
 void All(unsigned int N, unsigned int repeat) {
     static int counter = 0;
+
     Matrix<T> A(N, N, RS<T>);
     Matrix<T> B(N, N, RS<T>);
     Matrix<T> C(N, N);
@@ -24,7 +18,7 @@ void All(unsigned int N, unsigned int repeat) {
         }, [&] {
             Parallel::Winograd<T>::Mul(A, B, C);
         }, [&] {
-            Blas<T>::Mul(A, B, C);
+            BLAS<T>::Mul(A, B, C);
         }, [&] {
             if (N <= 512) Matrix<T>::Mul(A, B, C);
         }, [&] {
@@ -34,14 +28,14 @@ void All(unsigned int N, unsigned int repeat) {
     std::cout << "\033[1;32m";
     std::cout << "\nTest all algorithms " << ++counter << " {N = " << N << ". Type = " << typeid(T).name() << "}:\n";
     std::cout << "\033[1;37m";
-    std::cout << '\t' << result[0] << ' ' << Time::Prefix<Unit>::name << "\t - Basic Winograd\n";
-    std::cout << '\t' << result[1] << ' ' << Time::Prefix<Unit>::name << "\t - Parallel Winograd\n";
-    std::cout << '\t' << result[2] << ' ' << Time::Prefix<Unit>::name << "\t - Blas\n";
+    std::cout << '\t' << result[0] << ' ' << Time::Prefix<Unit>::val << "\t - Basic Winograd\n";
+    std::cout << '\t' << result[1] << ' ' << Time::Prefix<Unit>::val << "\t - Parallel Winograd\n";
+    std::cout << '\t' << result[2] << ' ' << Time::Prefix<Unit>::val << "\t - Blas\n";
     if (N <= 512)
-        std::cout << '\t' << result[3] << ' ' << Time::Prefix<Unit>::name << "\t - Classic\n";
+        std::cout << '\t' << result[3] << ' ' << Time::Prefix<Unit>::val << "\t - Classic\n";
     else
         std::cout << '\t' << "дохуя\t - Classic\n";
-    std::cout << '\t' << result[4] << ' ' << Time::Prefix<Unit>::name << "\t - Classic Parallel 4\n";
+    std::cout << '\t' << result[4] << ' ' << Time::Prefix<Unit>::val << "\t - Classic Parallel 4\n";
 }
 
 
@@ -66,7 +60,7 @@ void Cap(unsigned int N, unsigned int repeat) {
                     Parallel::Winograd<T> w(N, caps[k], caps[g]);
                     w.Mul(A, B, C, caps[g], caps[k]);
                 }, [&] {
-                    Blas<T>::Mul(A, B, C);
+                    BLAS<T>::Mul(A, B, C);
                 }
             );
             std::cout << "\033[1;32m";
@@ -116,7 +110,7 @@ int main() {
     All<float, Time::ns>(8, 100000);
     All<float, Time::ns>(25, 10000);
     All<float, Time::mcs>(64, 10000);
-    All<double, Time::mcs>(64, 10000);
+    // All<double, Time::mcs>(64, 10000);
     All<float, Time::mcs>(78, 1000);
     All<float, Time::mcs>(128, 1000);
     All<float, Time::mcs>(133, 1000);
@@ -125,7 +119,7 @@ int main() {
     All<float, Time::mcs>(256, 300);
     All<float, Time::ms>(512, 100);
     All<float, Time::ms>(1024, 6);
-    All<double, Time::ms>(1024, 6);
+    // All<double, Time::ms>(1024, 6);
     // All<float, Time::ms>(2048, 3);
 
     // // Cap<float, Time::ns>(8, 100000);

@@ -7,8 +7,6 @@
 #include <thread>
 #include <memory>
 
-#define EVIL 7
-
 namespace s21 {
 
 namespace Parallel {
@@ -53,7 +51,7 @@ void Winograd<T>::Mul(const M &A, const M &B, M &C, i_type odd_cap, i_type winog
 }
 
 template<class T>
-struct Winograd<T>::LevelParallelEven final : public BW::LevelEven {
+struct Winograd<T>::LevelParallelEven final : public Level, public BW::PointerBase {
     using BW::Level::next;
     using PB = PointerBase;
     using PB::n;
@@ -63,13 +61,13 @@ struct Winograd<T>::LevelParallelEven final : public BW::LevelEven {
     
     Level *next1, *next2, *next3, *next4, *next5, *next6;
 
-    LevelParallelEven(i_type n) : LevelEven(n) {}
+    LevelParallelEven(i_type n) : PointerBase(n) {}
     void SW(const T *A, const T *B, T *C) override;
 
 };
 
 template<class T>
-struct Winograd<T>::LevelParallelOdd final : public BW::LevelOdd {
+struct Winograd<T>::LevelParallelOdd final : public Level, public BW::PointerBase {
     using Level::next;
     using PB = PointerBase;
     using PB::n;
@@ -79,7 +77,7 @@ struct Winograd<T>::LevelParallelOdd final : public BW::LevelOdd {
     
     Level *next1, *next2, *next3, *next4, *next5, *next6;
 
-    LevelParallelOdd(i_type n) : LevelOdd(n) {}
+    LevelParallelOdd(i_type n) : PointerBase(n) {}
     void SW(const T *A, const T *B, T *C) override;
 
 };
@@ -180,7 +178,7 @@ void Winograd<T>::Execute(const M &A, const M &B, M &C) {
         A.GetRows() != n_ || B.GetRows() != n_ || C.GetRows() != n_) {
         throw std::invalid_argument("Matrix size not match");
     }
-    L_[0]->SW(A.Data().data(), B.Data().data(), C.Data().data());
+    L_[0]->SW(A.Data(), B.Data(), C.Data());
 }
 
 template<class T>

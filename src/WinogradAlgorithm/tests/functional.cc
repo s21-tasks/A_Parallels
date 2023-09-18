@@ -18,8 +18,8 @@ using namespace s21;
 
 template<class T, class W>
 void Helper(unsigned int N, T random_min, T random_max, const W &w) {
-    Matrix<T> A(N, N, [&] { return Random::Easy<T>::F(random_min, random_max); });
-    Matrix<T> B(N, N, [&] { return Random::Easy<T>::F(random_min, random_max); });
+    Matrix<T> A(N, N, [&] { return Random::Easy<T>::R(random_min, random_max); });
+    Matrix<T> B(N, N, [&] { return Random::Easy<T>::R(random_min, random_max); });
     Matrix<T> C1(N, N);
     auto C2 = A * B;
     w.Mul(A, B, C1);
@@ -85,7 +85,6 @@ __ERROR_TEST(5, 6, 7, 8)
 __ERROR_TEST(1, 2, 3, 4)
 __ERROR_TEST(1, 1, 1, 1)
 __ERROR_TEST(0, 0, 0, 0)
-
 
 
 
