@@ -71,7 +71,7 @@ void Interface::TimeTestPipeline() {
     }
   }
   std::cout << "Pipeline time = "
-            << Time::Duration<Time::mcs>(time_point) / repeat_ << " mcs\n";
+            << Time::Duration<Time::ns>(time_point) / repeat_ << " ns\n";
 }
 
 template <class Alg>
@@ -83,8 +83,8 @@ void Interface::TimeTest(const std::string &name) {
     W.Execute(A, B, C);
   }
   std::cout << name
-            << " time = " << Time::Duration<Time::mcs>(time_point) / repeat_
-            << " mcs\n";
+            << " time = " << Time::Duration<Time::ns>(time_point) / repeat_
+            << " ns\n";
 }
 
 void Interface::TimeTest(
@@ -96,8 +96,8 @@ void Interface::TimeTest(
     func(A, B, C);
   }
   std::cout << name
-            << " time = " << Time::Duration<Time::mcs>(time_point) / repeat_
-            << " mcs\n";
+            << " time = " << Time::Duration<Time::ns>(time_point) / repeat_
+            << " ns\n";
 }
 
 Interface::InputSize::InputSize(Interface *ci, AbsMenu *next_menu)
