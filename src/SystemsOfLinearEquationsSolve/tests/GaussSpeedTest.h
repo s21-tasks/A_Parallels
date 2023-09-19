@@ -49,7 +49,7 @@ class GaussSpeedTest : public ConsoleInterface {
                         [&] { return Random::Normal<double>(-100, 100); });
     std::vector<double> consts(capacity);
     std::generate(consts.begin(), consts.end(),
-                  [] { return Random::Uniform(-100, 100); });
+                  [] { return Random::Uniform<double>(-100, 100); });
     gauss.set_equations(matr, consts);
   }
 

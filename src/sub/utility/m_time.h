@@ -11,7 +11,7 @@ namespace Time {
 
 typedef decltype((std::chrono::high_resolution_clock::now)()) TimeType;
 
-TimeType Now() { return std::chrono::high_resolution_clock::now(); }
+// TimeType Now() { return std::chrono::high_resolution_clock::now(); }
 
 typedef std::chrono::hours h;
 typedef std::chrono::minutes min;
@@ -62,7 +62,7 @@ struct Prefix<ns> {
 
 template <class Unit = ms>
 int64_t Test(std::function<void(void)> test_func, int N = 1) {
-  TimeType time_point = Now();
+  TimeType time_point = std::chrono::high_resolution_clock::now();
   // auto time_point = std::chrono::high_resolution_clock::now();
   for (int k = 0; k < N; ++k) {
     test_func();
