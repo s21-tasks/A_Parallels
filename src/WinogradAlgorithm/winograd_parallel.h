@@ -25,6 +25,7 @@ class Winograd : public Basic::Winograd<T> {
   Winograd(i_type n, i_type odd_cap = 25,
            i_type winograd_cap = 15);  // 81 & 16; 81 & 34; 63 & 64
   void Execute(const M &A, const M &B, M &C);
+  void Execute(const T *A, const T *B, T *C);
   static void Mul(const M &A, const M &B, M &C, i_type odd_cap = 25,
                   i_type winograd_cap = 15);
 
@@ -176,6 +177,11 @@ void Winograd<T>::Execute(const M &A, const M &B, M &C) {
     throw std::invalid_argument("Matrix size not match");
   }
   L_[0]->SW(A.Data(), B.Data(), C.Data());
+}
+
+template <class T>
+void Winograd<T>::Execute(const T *A, const T *B, T *C) {
+  L_[0]->SW(A, B, C);
 }
 
 template <class T>

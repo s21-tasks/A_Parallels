@@ -1,7 +1,7 @@
 .PHONY: functional_test speed_compare_test valgrind level_load_test \
 		level_load_test_slow speed_compare_test_slow \
 		functional_basic_test functional_parallel_test clean all \
-		interface pipeline_speed_compare, pipeline_speed_compare_slow
+		winograd pipeline_speed_compare pipeline_speed_compare_slow
 
 CC=g++
 FLAGS=-Wall -Werror -Wextra
@@ -10,11 +10,12 @@ STANDART=-std=c++17
 BLAS_FLAGS=-lpthread -lm -ldl -lblas
 GTEST_FLAGS=-lgtest -lgtest_main -pthread
 INTERFACE_SRC=../sub/ConsoleInterface/ConsoleInterface.cc
+THREAD_SRC=../sub/thread/m_thread.cc
 
-all: interface
+all: winograd
 
-interface:
-	$(CC) $(FLAGS) $(SRC) $(INTERFACE_SRC) interface.cc -o winograd_optimized $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
+winograd:
+	$(CC) $(FLAGS) $(SRC) $(INTERFACE_SRC) interface.cc $(THREAD_SRC) -o winograd $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
 	./winograd
 
 fbt_build_helper:
@@ -32,27 +33,27 @@ functional_parallel_test: fpt_build_helper
 functional_test: functional_basic_test functional_parallel_test
 
 speed_compare_test:
-	$(CC) ../sub/thread/m_thread.cc $(FLAGS) tests/speed_compare.cc -o speed_compare_test $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
+	$(CC) $(THREAD_SRC) $(FLAGS) tests/speed_compare.cc -o speed_compare_test $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
 	./speed_compare_test
 
 speed_compare_test_slow:
-	$(CC) ../sub/thread/m_thread.cc $(FLAGS) tests/speed_compare.cc -o speed_compare_test_optimized $(STANDART) $(BLAS_FLAGS)
+	$(CC) $(THREAD_SRC) $(FLAGS) tests/speed_compare.cc -o speed_compare_test_optimized $(STANDART) $(BLAS_FLAGS)
 	./speed_compare_test_slow
 
 level_load_test:
-	$(CC) $(FLAGS) tests/level_load.cc -o level_load_test_optimized $(STANDART) $(OPTIMIZATION)
+	$(CC) $(FLAGS) tests/level_load.cc -o level_load_test $(STANDART) $(OPTIMIZATION)
 	./level_load_test
 
 level_load_test_slow:
-	$(CC) $(FLAGS) tests/level_load.cc -o level_load_test $(STANDART)
+	$(CC) $(FLAGS) tests/level_load.cc -o level_load_test_slow $(STANDART)
 	./level_load_test_slow
 
 pipeline_speed_compare:
-	$(CC) $(FLAGS) tests/pipeline.cc -o pipeline_speed_compare $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
+	$(CC) $(FLAGS) tests/pipeline.cc $(THREAD_SRC) -o pipeline_speed_compare $(STANDART) $(BLAS_FLAGS) $(OPTIMIZATION)
 	./pipeline_speed_compare
 
 pipeline_speed_compare_slow:
-	$(CC) $(FLAGS) tests/pipeline.cc -o pipeline_speed_compare_slow $(STANDART) $(BLAS_FLAGS)
+	$(CC) $(FLAGS) tests/pipeline.cc $(THREAD_SRC) -o pipeline_speed_compare_slow $(STANDART) $(BLAS_FLAGS)
 	./pipeline_speed_compare_slow
 
 valgrind: fbt_build_helper fpt_build_helper

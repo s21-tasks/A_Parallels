@@ -1,13 +1,14 @@
 #pragma once
 
 #include <any>
+#include <atomic>
+#include <condition_variable>
 #include <functional>
 #include <iostream>
+#include <mutex>
 #include <queue>
 #include <thread>
 #include <vector>
-#include <condition_variable>
-#include <mutex>
 
 template <typename T>
 class Pipeline {
@@ -51,6 +52,7 @@ class Pipeline {
 
     // Обработка данных в элементе конвейера
     void Process(T& data) {
+      static std::atomic_int i = 0;
       if (!check || check(data)) {
         {
           std::unique_lock<std::mutex> lock(mtx);
@@ -66,7 +68,7 @@ class Pipeline {
     void SetNext(PipelineElement* elem) { next = elem; }
 
     // Получение указателя на следующий элемент конвейера
-    inline PipelineElement* GetNext()  { return next; }
+    inline PipelineElement* GetNext() { return next; }
 
    private:
     // Рабочая функция элемента конвейера
@@ -81,6 +83,9 @@ class Pipeline {
         task_queue.pop();
         lock.unlock();
         try {
+          if (!func) {
+            throw std::runtime_error("func is nullptr");
+          }
           func(data);
         } catch (std::exception& e) {
           std::cerr << e.what() << std::endl;
@@ -101,6 +106,7 @@ class Pipeline {
       }
       cv.notify_all();
       t->join();
+      // next->Finish();
       delete t;
     }
 

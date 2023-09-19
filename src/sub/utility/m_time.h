@@ -9,11 +9,9 @@ namespace s21 {
 
 namespace Time {
 
-typedef decltype((std::chrono::high_resolution_clock::now)()) T;
+typedef decltype((std::chrono::high_resolution_clock::now)()) TimeType;
 
-// T Now() {
-//     return std::chrono::high_resolution_clock::now();
-// }
+TimeType Now() { return std::chrono::high_resolution_clock::now(); }
 
 typedef std::chrono::hours h;
 typedef std::chrono::minutes min;
@@ -24,15 +22,48 @@ typedef std::chrono::nanoseconds ns;
 
 template <class Unit = ms>
 // int64_t Duration(T first, T second = Now()) {
-int64_t Duration(T first,
-                 T second = std::chrono::high_resolution_clock::now()) {
+int64_t Duration(TimeType first,
+                 TimeType second = std::chrono::high_resolution_clock::now()) {
   return std::chrono::duration_cast<Unit>(second - first).count();
 }
 
+template <class Unit>
+struct Prefix;
+
+template <>
+struct Prefix<h> {
+  static constexpr const char val[] = "h";
+};
+
+template <>
+struct Prefix<min> {
+  static constexpr const char val[] = "min";
+};
+
+template <>
+struct Prefix<sec> {
+  static constexpr const char val[] = "sec";
+};
+
+template <>
+struct Prefix<ms> {
+  static constexpr const char val[] = "ms";
+};
+
+template <>
+struct Prefix<mcs> {
+  static constexpr const char val[] = "mcs";
+};
+
+template <>
+struct Prefix<ns> {
+  static constexpr const char val[] = "ns";
+};
+
 template <class Unit = ms>
 int64_t Test(std::function<void(void)> test_func, int N = 1) {
-  // T time_point = Now();
-  T time_point = std::chrono::high_resolution_clock::now();
+  TimeType time_point = Now();
+  // auto time_point = std::chrono::high_resolution_clock::now();
   for (int k = 0; k < N; ++k) {
     test_func();
   }

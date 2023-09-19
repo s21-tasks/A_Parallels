@@ -4,6 +4,7 @@
 #include <map>
 #include <random>
 #include <thread>
+#include <type_traits>
 
 namespace s21 {
 
@@ -14,42 +15,47 @@ Type Full(Args &&...args) {
   static Engine generator{std::random_device{}()};
   static thread_local std::map<std::tuple<std::decay_t<Args>...>, Distribution>
       distributions;
-
   return distributions.emplace(std::tie(args...), Distribution(args...))
       .first->second(generator);
 }
-// template <class Type, class Distribution, class Engine, class... Args>
-// Type Full(Args&&... args) {
-//   static thread_local Engine generator{std::random_device{}()};
-//   static std::map<std::thread::id,
-//   std::map<std::tuple<std::decay_t<Args>...>, Distribution>> distributions;
 
-//   return distributions[std::this_thread::get_id()].emplace(std::tie(args...),
-//   Distribution(args...)).first->second(generator);
-// }
-
-template <class Type = float,
-          class Distribution = std::normal_distribution<Type>,
+template <class FPType = float,
+          class Distribution = std::normal_distribution<FPType>,
           class Engine = std::mt19937>
-Type Normal(float mean, float sd) {
-  return Full<Type, Distribution, Engine>(mean, sd);
+FPType Normal(FPType mean, FPType sd) {
+  return Full<FPType, Distribution, Engine>(mean, sd);
 }
 
 template <class Distribution = std::bernoulli_distribution,
           class Engine = std::mt19937>
-bool Bool(float chance) {
+bool Bool(double chance) {
   return Full<bool, Distribution, Engine>(chance);
 }
 
-template <class Type = float, class Engine = std::mt19937>
-Type Uniform(float min, float max) {
-  return Full<Type, std::uniform_real_distribution<Type>, Engine>(min, max);
+template <class FPType = float, class Engine = std::mt19937>
+FPType Uniform(FPType min, FPType max = 1.0) {
+  return Full<FPType, std::uniform_real_distribution<FPType>, Engine>(min, max);
 }
 
-template <class Engine = std::mt19937>
-int Int(int min, int max) {
-  return Full<int, std::uniform_int_distribution<int>, Engine>(min, max);
+template <class IntType = int, class Engine = std::mt19937>
+IntType Int(IntType min, IntType max = std::numeric_limits<IntType>::max()) {
+  return Full<IntType, std::uniform_int_distribution<IntType>, Engine>(min,
+                                                                       max);
 }
+
+template <class Type, class = void>
+struct Easy;
+
+template <class Type>
+struct Easy<Type, std::enable_if_t<std::is_integral<Type>::value &&
+                                   !std::is_same<Type, bool>::value>> {
+  static Type R(Type min, Type max) { return Int<Type>(min, max); }
+};
+
+template <typename Type>
+struct Easy<Type, std::enable_if_t<std::is_floating_point<Type>::value>> {
+  static Type R(Type min, Type max) { return Uniform<Type>(min, max); }
+};
 
 }  // namespace Random
 

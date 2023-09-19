@@ -29,6 +29,7 @@ class Winograd {
  public:
   Winograd(i_type n, i_type odd_cap = 25, i_type winograd_cap = 15);
   void Execute(const M &A, const M &B, M &C);
+  void Execute(const T *A, const T *B, T *C);
   static void Mul(const M &A, const M &B, M &C, i_type odd_cap = 25,
                   i_type winograd_cap = 15);
 
@@ -146,7 +147,6 @@ struct Winograd<T>::Level22 final : public Level {
 
 template <class T>
 Winograd<T>::Winograd(i_type n, i_type odd_cap, i_type winograd_cap) : n_(n) {
-  std::cout << "Winograd constructor\n";
   if (n <= 1) {
     throw std::invalid_argument("Matrix size must be greater than 1");
   }
@@ -190,6 +190,11 @@ void Winograd<T>::Execute(const M &A, const M &B, M &C) {
         std::to_string(B.GetRows()) + " || " + std::to_string(C.GetRows()));
   }
   L_[0]->SW(A.Data(), B.Data(), C.Data());
+}
+
+template <class T>
+void Winograd<T>::Execute(const T *A, const T *B, T *C) {
+  L_[0]->SW(A, B, C);
 }
 
 template <class T>

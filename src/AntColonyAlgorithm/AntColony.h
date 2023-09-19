@@ -2,8 +2,8 @@
 
 #include <limits>
 
-#include "../sub/Matrix/Matrix.h"
-#include "../sub/Utility/Utility.h"
+#include "../sub/matrix/matrix.h"
+#include "../sub/utility/utility.h"
 #include "Helpers.h"
 
 namespace s21 {
@@ -194,10 +194,10 @@ void Ant<T>::Run() {
     }
   }
 
-  if (colony_.graph_.Get(route_.vertices[visited_], start_) == 0) {
+  if (colony_.graph_(route_.vertices[visited_], start_) == 0) {
     route_.distance = std::numeric_limits<double>::infinity();
   } else {
-    route_.distance += colony_.graph_.Get(position_, start_);
+    route_.distance += colony_.graph_(position_, start_);
     route_.vertices[visited_ + 1] = start_;
   }
 }
@@ -206,10 +206,10 @@ template <class T>
 double Ant<T>::CountProbabilities() {
   double sum = 0.0;
   for (int i = 0; i < memory_.size(); ++i) {
-    if (colony_.graph_.Get(position_, i) != 0 && !memory_[i]) {
+    if (colony_.graph_(position_, i) != 0 && !memory_[i]) {
       probabilities_[i] =
-          pow(colony_.pheromone_.Get(position_, i), colony_.alpha_) *
-          pow(1.0 / colony_.graph_.Get(position_, i), colony_.beta_);
+          pow(colony_.pheromone_(position_, i), colony_.alpha_) *
+          pow(1.0 / colony_.graph_(position_, i), colony_.beta_);
       sum += probabilities_[i];
     } else {
       probabilities_[i] = 0.0;
@@ -240,7 +240,7 @@ void Ant<T>::Clear() {
 
 template <class T>
 void Ant<T>::Visit(int move) {
-  route_.distance += colony_.graph_.Get(position_, move);
+  route_.distance += colony_.graph_(position_, move);
   position_ = move;
   memory_[move] = true;
   route_.vertices[++visited_] = move;

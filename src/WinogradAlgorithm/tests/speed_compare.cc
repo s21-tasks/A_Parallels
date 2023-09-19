@@ -13,6 +13,7 @@ void All(unsigned int N, unsigned int repeat) {
   Matrix<T> A(N, N, RS<T>);
   Matrix<T> B(N, N, RS<T>);
   Matrix<T> C(N, N);
+
   auto result = Time::Compare<Unit>(
       repeat, [&] { Basic::Winograd<T>::Mul(A, B, C); },
       [&] { Parallel::Winograd<T>::Mul(A, B, C); },
@@ -21,6 +22,7 @@ void All(unsigned int N, unsigned int repeat) {
         if (N <= 512) Matrix<T>::Mul(A, B, C);
       },
       [&] { Matrix<T>::MulParallel(A, B, C, 4); });
+
   std::cout << "\033[1;32m";
   std::cout << "\nTest all algorithms " << ++counter << " {N = " << N
             << ". Type = " << typeid(T).name() << "}:\n";
@@ -40,78 +42,36 @@ void All(unsigned int N, unsigned int repeat) {
             << "\t - Classic Parallel 4\n";
 }
 
-// odd cap and winograd cap try to find the best value
-template <class T, class Unit>
-void Cap(unsigned int N, unsigned int repeat) {
-  static int counter = 0;
-  Matrix<T> A(N, N, RS<T>);
-  Matrix<T> B(N, N, RS<T>);
-  Matrix<T> C(N, N);
-
-  std::vector<unsigned int> caps{15, 16, 25, 33,  34,  47,
-                                 63, 64, 81, 127, 128, 129};
-
-  for (unsigned int k = 0; k < caps.size(); ++k) {
-    for (unsigned int g = k; g < caps.size(); ++g) {
-      auto result = Time::Compare<Unit>(
-          repeat,
-          [&] {
-            Basic::Winograd<T> w(N, caps[k], caps[g]);
-            w.Mul(A, B, C, caps[g], caps[k]);
-          },
-          [&] {
-            Parallel::Winograd<T> w(N, caps[k], caps[g]);
-            w.Mul(A, B, C, caps[g], caps[k]);
-          },
-          [&] { BLAS<T>::Mul(A, B, C); });
-      std::cout << "\033[1;32m";
-      std::cout << "\nTest cap " << ++counter << " {N = " << N
-                << ". Type = " << typeid(T).name() << "}:\n";
-      std::cout << "\033[1;37m";
-      std::cout << "\t\tOdd cap = " << caps[g] << "\tWinograd cap = " << caps[k]
-                << '\n';
-      std::cout << '\t' << result[0] << ' ' << Time::Prefix<Unit>::name
-                << "\t - Basic Winograd\n";
-      std::cout << '\t' << result[1] << ' ' << Time::Prefix<Unit>::name
-                << "\t - Parallel Winograd\n";
-      std::cout << '\t' << result[2] << ' ' << Time::Prefix<Unit>::name
-                << "\t - Blas\n";
-    }
-  }
+template <class T>
+void ToFile3(std::ofstream &file, const typename Matrix<T>::i_type N,
+             int repeat) {
+  Matrix<T> A(N, N,
+              Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10)));
+  Matrix<T> B(N, N,
+              Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10)));
+  Matrix<T> C1(N, N);
+  Matrix<T> C2(N, N);
+  Matrix<T> C3(N, N);
+  auto result = Time::Compare<Time::ns>(
+      repeat, [&] { Basic::Winograd<T>::Mul(A, B, C1); },
+      [&] { BLAS<T>::Mul(A, B, C2); }, [&] { Matrix<T>::Mul(A, B, C3); });
+  file << N << ' ' << result[0] << ' ' << result[1] << ' ' << result[2] << '\n';
 }
 
-// template<class T>
-// void ToFile3(std::ofstream &file, const typename Matrix<T>::i_type N, int
-// repeat) {
-//     Matrix<T> A(N, N, Random::Easy<T>::F(static_cast<T>(-10),
-//     static_cast<T>(10))); Matrix<T> B(N, N,
-//     Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10))); Matrix<T>
-//     C1(N, N); Matrix<T> C2(N, N); Matrix<T> C3(N, N); auto result =
-//     Time::Compare<Time::ns>(repeat, [&] {
-//         Winograd<T>::Mul(A, B, C1);
-//     }, [&] {
-//         Blas<T>::Mul(A, B, C2);
-//     }, [&] {
-//         Matrix<T>::Mul(A, B, C3);
-//     });
-//     file << N << ' ' << result[0] << ' ' << result[1] << ' ' << result[2] <<
-//     '\n';
-// }
-
-// template<class T>
-// void ToFile2(std::ofstream &file, const typename Matrix<T>::i_type N, int
-// repeat) {
-//     Matrix<T> A(N, N, Random::Easy<T>::F(static_cast<T>(-10),
-//     static_cast<T>(10))); Matrix<T> B(N, N,
-//     Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10))); Matrix<T>
-//     C1(N, N); Matrix<T> C2(N, N); auto result =
-//     Time::Compare<Time::ns>(repeat, [&] {
-//         Winograd<T>::Mul(A, B, C1);
-//     }, [&] {
-//         Blas<T>::Mul(A, B, C2);
-//     });
-//     file << N << ' ' << result[0] << ' ' << result[1] << '\n';
-// }
+template <class T>
+void ToFile2(std::ofstream &file, const typename Matrix<T>::i_type N,
+             int repeat) {
+  Matrix<T> A(N, N,
+              Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10)));
+  Matrix<T> B(N, N,
+              Random::Easy<T>::F(static_cast<T>(-10), static_cast<T>(10)));
+  Matrix<T> C1(N, N);
+  Matrix<T> C2(N, N);
+  auto result = Time::Compare<Time::ns>(
+      repeat, [&] { Basic::Winograd<T>::Mul(A, B, C1); },
+      [&] { BLAS<T>::Mul(A, B, C2); });
+  file << N << ' ' << result[0] << ' ' << result[1] << '\n';
+}
 
 int main() {
   All<float, Time::ns>(8, 100000);
@@ -128,21 +88,6 @@ int main() {
   All<float, Time::ms>(1024, 6);
   // All<double, Time::ms>(1024, 6);
   // All<float, Time::ms>(2048, 3);
-
-  // // Cap<float, Time::ns>(8, 100000);
-  // // Cap<float, Time::ns>(25, 10000);
-  // // Cap<float, Time::mcs>(64, 10000);
-  // // Cap<double, Time::mcs>(64, 10000);
-  // Cap<float, Time::mcs>(78, 1000);
-  // Cap<float, Time::mcs>(128, 1000);
-  // // Cap<float, Time::mcs>(133, 1000);
-  // Cap<float, Time::mcs>(211, 1000);
-  // Cap<float, Time::mcs>(255, 400);
-  // Cap<float, Time::mcs>(256, 300);
-  // // Cap<float, Time::ms>(512, 100);
-  // // Cap<float, Time::ms>(1024, 6);
-  // // Cap<double, Time::ms>(1024, 6);
-  // // Cap<float, Time::ms>(2048, 3);
 
   // G<float, Time::sec>(4096, 2);
 

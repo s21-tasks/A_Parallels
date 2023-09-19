@@ -8,16 +8,16 @@ all: ant gauss winograd
 clean: clean_gauss clean_ant clean_winograd
 
 ant:
-
+	@$(MAKE) -C AntColonyAlgorithm
 
 clean_ant:
-
+	@$(MAKE) clean -C AntColonyAlgorithm
 
 winograd:
-
+	@$(MAKE) -C WinogradAlgorithm
 
 clean_winograd:
-
+	rm -rf WinogradAlgorithm/winograd
 
 gauss:
 	mkdir -p SystemsOfLinearEquationsSolve/build

@@ -14,8 +14,8 @@ namespace s21 {
  * the total length of the path.
  */
 struct TsmResult {
-  std::vector<int> vertices;
   double distance = 0;
+  std::vector<int> vertices;
 
   /**
    * @brief Default constructor for TsmResult.

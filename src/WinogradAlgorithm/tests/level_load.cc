@@ -1,8 +1,14 @@
-#include "tests.h"
-
 #define LEVEL_LOAD_TEST__P
+#include "../../sub/utility/utility.h"
+#include "../winograd_parallel.h"
+#include "../winograd_pipeline.h"
 
 using namespace s21;
+
+template <class T>
+T RS() {
+  return Random::Easy<T>::R(static_cast<T>(-10), static_cast<T>(10));
+}
 
 template <class T>
 void F(unsigned int N) {
